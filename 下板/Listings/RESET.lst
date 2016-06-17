@@ -1,0 +1,39 @@
+A51 MACRO ASSEMBLER  RESET                                                                03/17/2016 21:26:51 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.02c
+OBJECT MODULE PLACED IN .\Objects\RESET.obj
+ASSEMBLER INVOKED BY: D:\Keil_v5\C51\BIN\A51.EXE RESET.a51 SET(LARGE) DEBUG PRINT(.\Listings\RESET.lst) OBJECT(.\Objects
+                      \RESET.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+  00C7                 1     IAP_CONTR   DATA    0C7H                    ;IAP¿ØÖÆ¼Ä´æÆ÷
+                       2             
+                       3             
+  F200                 4     APENTRY     EQU     0F200H                  ;Ó¦ÓÃ³ÌÐòÈë¿ÚµØÖ·Ê¾Ý(1Ò³)
+                       5     
+                       6     
+                       7     ;------------------------------------------------
+F200                   8                 ORG     APENTRY
+F200 75C720            9                 MOV     IAP_CONTR,#20H          ;Èí¼þ¸´Î»ÏµÍ³
+F203 80FE             10                 SJMP    $
+                      11     ;------------------------------------------------
+                      12     
+                      13                 END
+A51 MACRO ASSEMBLER  RESET                                                                03/17/2016 21:26:51 PAGE     2
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+APENTRY. . . . . .  N NUMB   F200H   A   
+IAP_CONTR. . . . .  D ADDR   00C7H   A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)

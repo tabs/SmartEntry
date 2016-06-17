@@ -1,0 +1,286 @@
+C51 COMPILER V9.54   UPDATEMOUDLE                                                          03/19/2016 14:59:36 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE UPDATEMOUDLE
+OBJECT MODULE PLACED IN .\Objects\UpdateMoudle.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE UpdateMoudle.c LARGE OPTIMIZE(8,SPEED) BROWSE INTVECTOR(0X2000) DEBUG OB
+                    -JECTEXTEND PRINT(.\Listings\UpdateMoudle.lst) TABS(2) OBJECT(.\Objects\UpdateMoudle.obj)
+
+line level    source
+
+   1          #include "IAP15W4K61S4.h"
+   2          #include <intrins.H>
+   3          #include <string.h>
+   4          #define RESETSYSTEM()    ((void (code *)())0xF3F0)() //复位入口
+   5          
+   6          typedef unsigned long ULONG;
+   7          typedef unsigned int UINT;
+   8          typedef unsigned char UCHAR;
+   9          typedef ULONG FLADDR;
+  10          
+  11          #define FOSC 22118400L          //时钟频率
+  12          #define BAUD 115200             //波特率
+  13          
+  14          #define S1_S0 0x40              //P_SW1.6
+  15          #define S1_S1 0x80              //P_SW1.7
+  16          
+  17          #define ERROR   0
+  18          #define OK      1
+  19          
+  20          
+  21          
+  22          /*定义Flash 操作等待时间及允许IAP/ISP/EEPROM 操作的常数*/
+  23          /*#define ENABLE_ISP 0x80*/ //系统工作时钟<30MHz 时，对IAP_CONTR 寄存器设置此值
+  24          #define ENABLE_ISP 0x81 //系统工作时钟<24MHz 时，对IAP_CONTR 寄存器设置此值
+  25          /*#define ENABLE_ISP 0x82*/ //系统工作时钟<20MHz 时，对IAP_CONTR 寄存器设置此值
+  26          /*#define ENABLE_ISP 0x83*/ //系统工作时钟<12MHz 时，对IAP_CONTR 寄存器设置此值
+  27          /*#define ENABLE_ISP 0x84*/ //系统工作时钟<6MHz 时，对IAP_CONTR 寄存器设置此值
+  28          /*#define ENABLE_ISP 0x85*/ //系统工作时钟<3MHz 时，对IAP_CONTR 寄存器设置此值
+  29          /*#define ENABLE_ISP 0x86*/ //系统工作时钟<2MHz 时，对IAP_CONTR 寄存器设置此值
+  30          /*#define ENABLE_ISP 0x87*/ //系统工作时钟<1MHz 时，对IAP_CONTR 寄存器设置此值
+  31          /****************************************************************************/
+  32          
+  33          
+  34          
+  35          #define SysCordAppUpdataFlag 0x7E00
+  36          #define UpdataFlag0 0x5A/*是否升级判断标志 0x5a 0xa5*/
+  37          #define UpdataFlag1 0xA5
+  38          #define SysCordStartAddr 0 /*程序应用区的起始地址*/
+  39          #define SysCordEndAddr 0x7E00 /*程序应用区的结束地址*/
+  40          #define SysCordAppSaveStartTempAddr 0x8000 /*程序应用区暂存的起始地址*/
+  41          
+  42          
+  43          
+  44          /*内部FLASH函数声明区*/
+  45          void IAP_Disable();/*关闭IAP 功能*/
+  46          void FLASH_ByteWrite (FLADDR addr, char byte);
+  47          unsigned char FLASH_ByteRead (FLADDR addr);
+  48          void FLASH_PageErase (FLADDR addr);
+  49          UCHAR sequential_write_flash_in_one_sector(UINT begin_addr, UINT counter,UCHAR array[]);
+  50          void Btlder_init_Uart1(void);
+  51          void btlder(void);
+  52          
+  53          
+  54          //?PR?*?UPDATEMOUDLE(0x0F000)
+C51 COMPILER V9.54   UPDATEMOUDLE                                                          03/19/2016 14:59:36 PAGE 2   
+
+  55          
+  56          
+  57          void Btlder_init_Uart1(void)
+  58          {
+  59   1      ACC = P_SW1;
+  60   1      ACC &= ~(S1_S0 | S1_S1);    //S1_S0=0 S1_S1=0
+  61   1      P_SW1 = ACC;                //(P3.0/RxD, P3.1/TxD)
+  62   1      SCON = 0x50;                //1010000
+  63   1      T2L = (65536 - (FOSC/4/BAUD));   //设置波特率重装值
+  64   1      T2H = (65536 - (FOSC/4/BAUD))>>8;
+  65   1      AUXR = 0x14;                //T2为1T模式, 并启动定时器2 10100
+  66   1      AUXR |= 0x01;               //选择定时器2为串口1的波特率发生器
+  67   1      }
+  68          
+  69          
+  70          
+  71          //   #pragma asm
+  72          //   ORG 0F000H
+  73          //   #pragma endasm
+  74          
+  75          void btlder(void)
+  76           {
+  77   1      
+  78   1      unsigned int Addr_i,Addr_j ;
+  79   1      unsigned char UART_DATA_buf = 0,UART_DATA_buf0 = 0,IAP_UpdatePacNum=0;
+  80   1      
+  81   1         Btlder_init_Uart1();
+  82   1      
+  83   1         SBUF = 0xf0;while(!(SCON&0x02));SCON &= ~ 0x02;
+  84   1       /********************************************************************/
+  85   1       /*上电读取程序是否修改，修改则更新程序，不修改，则继续执行          */
+  86   1       UART_DATA_buf=FLASH_ByteRead (SysCordAppUpdataFlag);
+  87   1       UART_DATA_buf0=FLASH_ByteRead ((SysCordAppUpdataFlag+1));
+  88   1       IAP_UpdatePacNum = FLASH_ByteRead (SysCordAppUpdataFlag+2);
+  89   1         SBUF = UART_DATA_buf;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();
+  90   1         SBUF = UART_DATA_buf0;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();
+  91   1         SBUF = IAP_UpdatePacNum;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();
+  92   1       if((UART_DATA_buf==UpdataFlag0)&&(UART_DATA_buf0==UpdataFlag1))/*如果相等则更新源程序*/
+  93   1       {/*擦除程序区*/
+  94   2      SBUF = 0xf1;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();
+  95   2      
+  96   2         for(Addr_i=SysCordStartAddr;Addr_i<SysCordEndAddr;Addr_i+=0x200)   //根据包的数量更新用户程序区
+  97   2         { 
+  98   3           FLASH_PageErase (Addr_i);  
+  99   3           SBUF = Addr_i>>8;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();
+ 100   3           SBUF = Addr_i;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();
+ 101   3         }
+ 102   2      
+ 103   2         for(Addr_i=SysCordStartAddr;Addr_i<IAP_UpdatePacNum;Addr_i+=0x200)   //根据包的数量更新用户程序区
+ 104   2         { 
+ 105   3           FLASH_PageErase (Addr_i);  
+ 106   3            SBUF = Addr_i;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();
+ 107   3              for(Addr_j=0;Addr_j<512;Addr_j++)
+ 108   3         {
+ 109   4           //SBUF = Addr_j;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();
+ 110   4           UART_DATA_buf=FLASH_ByteRead(SysCordAppSaveStartTempAddr+Addr_i+Addr_j);
+ 111   4          FLASH_ByteWrite(Addr_j+Addr_i, UART_DATA_buf);
+ 112   4         }
+ 113   3         FLASH_PageErase (SysCordAppSaveStartTempAddr+Addr_i);                //擦除临时储存区          
+ 114   3           SBUF = 0xf2;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();_nop_();
+ 115   3         }
+ 116   2      
+C51 COMPILER V9.54   UPDATEMOUDLE                                                          03/19/2016 14:59:36 PAGE 3   
+
+ 117   2          for(Addr_i = 0;Addr_i<0x200;Addr_i++){
+ 118   3            SBUF = FLASH_ByteRead(Addr_i);
+ 119   3            while(!(SCON&0x02));
+ 120   3            SCON &= ~ 0x02;
+ 121   3            _nop_();_nop_();
+ 122   3          }
+ 123   2         
+ 124   2         SBUF = 0xf3;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();
+ 125   2          FLASH_PageErase(SysCordAppUpdataFlag); 
+ 126   2           SBUF = 0xf5;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();
+ 127   2      
+ 128   2          RESETSYSTEM();
+ 129   2         }
+ 130   1       
+ 131   1         SBUF = 0xf4;while(!(SCON&0x02));SCON &= ~ 0x02;_nop_();
+ 132   1         UART_DATA_buf=0;
+ 133   1         Addr_i=0;
+ 134   1      
+ 135   1      //   while(1);
+ 136   1         /*#pragma asm
+ 137   1         DEC SP
+ 138   1         DEC SP
+ 139   1         LJMP 403H
+ 140   1         #pragma endasm*/
+ 141   1      //   
+ 142   1      //   #pragma asm
+ 143   1      //   LJMP 0F200H
+ 144   1      //   #pragma endasm
+ 145   1      
+ 146   1       }
+ 147           
+ 148           
+ 149           
+ 150          void FLASH_ByteWrite (FLADDR addr, char byte)
+ 151          {
+ 152   1          IAP_CONTR = ENABLE_ISP;         //打开 IAP 功能, 设置Flash 操作等待时间
+ 153   1          IAP_CMD = 0x02;                 //IAP/ISP/EEPROM 字节编程命令
+ 154   1          IAP_ADDRH = (addr&0xff00)>>8;    //设置目标单元地址的高8 位地址
+ 155   1          IAP_ADDRL = (addr&0xff);    //设置目标单元地址的低8 位地址
+ 156   1      
+ 157   1          IAP_DATA = byte;                  //要编程的数据先送进IAP_DATA 寄存器
+ 158   1          EA=0;
+ 159   1          IAP_TRIG = 0x5A;   //先送 5Ah,再送A5h 到ISP/IAP 触发寄存器,每次都需如此
+ 160   1          IAP_TRIG = 0xA5;   //送完A5h 后，ISP/IAP 命令立即被触发起动
+ 161   1            _nop_();
+ 162   1          EA=1; 
+ 163   1          IAP_Disable();  //关闭IAP 功能, 清相关的特殊功能寄存器,使CPU 处于安全状态,
+ 164   1                          //一次连续的IAP 操作完成之后建议关闭IAP 功能,不需要每次都关
+ 165   1      }
+ 166          /****************************************************************************/
+ 167          /* FLASH_ByteRead                                                           */ 
+ 168          /*This routine reads a <byte> from the linear FLASH address <addr>.         */ 
+ 169          /*                                                                          */ 
+ 170          /****************************************************************************/
+ 171          unsigned char FLASH_ByteRead (FLADDR addr)
+ 172          {
+ 173   1          IAP_DATA = 0x00;
+ 174   1          IAP_CONTR = ENABLE_ISP;         //打开IAP 功能, 设置Flash 操作等待时间
+ 175   1          IAP_CMD = 0x01;                 //IAP/ISP/EEPROM 字节读命令
+ 176   1      
+ 177   1          IAP_ADDRH = (addr&0xff00)>>8;    //设置目标单元地址的高8 位地址
+ 178   1          IAP_ADDRL = (addr&0xff);    //设置目标单元地址的低8 位地址
+C51 COMPILER V9.54   UPDATEMOUDLE                                                          03/19/2016 14:59:36 PAGE 4   
+
+ 179   1      
+ 180   1          EA=0;
+ 181   1          IAP_TRIG = 0x5A;   //先送 5Ah,再送A5h 到ISP/IAP 触发寄存器,每次都需如此
+ 182   1          IAP_TRIG = 0xA5;   //送完A5h 后，ISP/IAP 命令立即被触发起动
+ 183   1          _nop_(); 
+ 184   1          EA=1;
+ 185   1          IAP_Disable();  //关闭IAP 功能, 清相关的特殊功能寄存器,使CPU 处于安全状态,
+ 186   1                          //一次连续的IAP 操作完成之后建议关闭IAP 功能,不需要每次都关
+ 187   1          return (IAP_DATA);
+ 188   1      }
+ 189          
+ 190          
+ 191          
+ 192          /****************************************************************************/
+ 193          /* FLASH_PageErase                                                          */ 
+ 194          /*This routine erases the FLASH page containing the linear FLASH addres     */ 
+ 195          /* <addr>.                                                                  */ 
+ 196          /****************************************************************************/
+ 197          void FLASH_PageErase (FLADDR addr)
+ 198          {
+ 199   1        
+ 200   1          IAP_CONTR = ENABLE_ISP;         //打开IAP 功能, 设置Flash 操作等待时间
+ 201   1          IAP_CMD = 0x03;                 //IAP/ISP/EEPROM 扇区擦除命令
+ 202   1      
+ 203   1          IAP_ADDRH = (addr&0xff00)>>8;    //设置目标单元地址的高8 位地址
+ 204   1          IAP_ADDRL = (addr&0xff);    //设置目标单元地址的低8 位地址
+ 205   1      
+ 206   1          EA=0;
+ 207   1          IAP_TRIG = 0x5A;   //先送 5Ah,再送A5h 到ISP/IAP 触发寄存器,每次都需如此
+ 208   1          IAP_TRIG = 0xA5;   //送完A5h 后，ISP/IAP 命令立即被触发起动
+ 209   1          _nop_();
+ 210   1      
+ 211   1          EA=1;
+ 212   1          IAP_Disable();  //关闭IAP 功能, 清相关的特殊功能寄存器,使CPU 处于安全状态,
+ 213   1        //一次连续的IAP 操作完成之后建议关闭IAP 功能,不需要每次都关
+ 214   1      }
+ 215          void IAP_Disable()
+ 216          {
+ 217   1          //关闭IAP 功能, 清相关的特殊功能寄存器,使CPU 处于安全状态,
+ 218   1          //一次连续的IAP 操作完成之后建议关闭IAP 功能,不需要每次都关
+ 219   1          IAP_CONTR = 0;      //关闭IAP 功能
+ 220   1          IAP_CMD   = 0;      //清命令寄存器,使命令寄存器无命令,此句可不用
+ 221   1          IAP_TRIG  = 0;      //清命令触发寄存器,使命令触发寄存器无触发,此句可不用
+ 222   1          IAP_ADDRH = 0x80;
+ 223   1          IAP_ADDRL = 0;
+ 224   1      }
+ 225          
+ 226          
+ 227          
+ 228          /* 写数据进 数据Flash存储器, 只在同一个扇区内写，不保留原有数据 */
+ 229          /* begin_addr,被写数据Flash开始地址；counter,连续写多少个字节； array[]，数据来源   */
+ 230          UCHAR sequential_write_flash_in_one_sector(UINT begin_addr, UINT counter, UCHAR array[])
+ 231          {
+ 232   1          UINT i = 0;
+ 233   1          UINT in_sector_begin_addr = 0;
+ 234   1          UINT sector_addr = 0;
+ 235   1      
+ 236   1          FLASH_PageErase(begin_addr);
+ 237   1      
+ 238   1          for(i=0; i<counter; i++)
+ 239   1          {
+ 240   2              /* 写一个字节 */
+C51 COMPILER V9.54   UPDATEMOUDLE                                                          03/19/2016 14:59:36 PAGE 5   
+
+ 241   2              FLASH_ByteWrite(begin_addr, array[i]);
+ 242   2              /*  比较对错 */
+ 243   2              if (FLASH_ByteRead(begin_addr) != array[i])
+ 244   2              {
+ 245   3                  IAP_Disable();
+ 246   3                  return 0;
+ 247   3              }
+ 248   2              begin_addr++;
+ 249   2          }
+ 250   1          IAP_Disable();
+ 251   1          return  1;
+ 252   1      }
+ 253          
+ 254          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    963    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      33
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

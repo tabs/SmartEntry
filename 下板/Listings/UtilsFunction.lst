@@ -1,0 +1,1040 @@
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE UTILSFUNCTION
+OBJECT MODULE PLACED IN .\Objects\UtilsFunction.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE UtilsFunction.c LARGE OPTIMIZE(8,SPEED) BROWSE INTVECTOR(0X2000) DEBUG O
+                    -BJECTEXTEND PRINT(.\Listings\UtilsFunction.lst) TABS(2) OBJECT(.\Objects\UtilsFunction.obj)
+
+line level    source
+
+   1          #include "flashfunction.h"
+   2          #include "init.h"
+   3          #include <string.h>
+   4          #define FE_MESSTYPEADDR 11 /*ÏûÏ¢ÀàÐÍ×Ö½ÚÔÚÖ¡ÖÐµÄÆðÊ¼Î»ÖÃ*/
+   5          #define FE_DATAADDR 13 /*Êý¾Ý×Ö½ÚÔÚÖ¡ÖÐµÄÆðÊ¼Î»ÖÃ*/
+   6          #define FE_CODENUM 10 //Ö¡ÐòºÅ×Ö½ÚÔÚÖ¡ÖÐµÄÆðÊ¼Î»ÖÃ
+   7          #define FE_LENGTH 2 //¶¨ÒåÊý¾Ý³¤¶ÈÔÚÖ¡ÖÐµÄÎ»ÖÃ
+   8          #define SYSTEM_ID 4 //¶¨Òå±¾»ú±àºÅÔÚÖ¡ÖÐµÄÎ»ÖÃ
+   9          #define HeartbeatTime 1000*4            //ÐÄÌø°üÊ±¼ä40s
+  10          #define BuzzerTimeNormal  10            //´¥·¢Ò»´Î·äÃùÆ÷ÏìµÄÊ±¼ä£¨Õý³£100ms£©
+  11          #define BuzzerTimeLong 100              //´¥·¢Ò»´Î·äÃùÆ÷ÏìµÄÊ±¼ä£¨À­³¤1000ms£©
+  12          #define BuzzerTimeShort 2               //¼±´Ù·äÃùÆ÷£¨20ms£©
+  13          #define ResetWifiTime 6000*8            //ºÍ·þÎñÆ÷Í¨ÐÅ³¬Ê±WIFIÖØÆôÊ±¼ä60*5s
+  14          #define Buzzer P36                      //·äÃùÆ÷Òý½Å¶¨Òå
+  15          #define nReloadWifi P37                 //WIFI»Ö¸´³ö³§ÉèÖÃÒý½Å£¨ÐèÒªÀ­µÍµçÆ½´óÓÚ1s£©
+  16          #define nResetWifi P07                  //WIFIÖØÆôÒý½Å£¨ÐèÒªÀ­µÍµçÆ½ÖÁÉÙ200MS£©
+  17          #define SysCordAppUpdataAddrFlag 0x7E00
+  18          #define SysCordAppSaveStartTempAddr 0x8000 /*³ÌÐòÓ¦ÓÃÇøÔÝ´æµÄÆðÊ¼µØÖ·*/
+  19          unsigned char const ReplySucc = 0x31;   
+  20          unsigned char const ReplyFail = 0x30;
+  21          unsigned int HeartbeatPacketCounter = 0;
+  22          unsigned int BuzzerCounter = 0;
+  23          unsigned int ResetWifiCounter = 0;
+  24          int  BuzzerTime = BuzzerTimeNormal;               //³õÊ¼»¯´¥·¢Ò»´Î·äÃùÆ÷ÏìµÄÊ±¼ä£¨Õý³£100ms£©
+  25          bit HeartbeatTrigger;
+  26          bit BuzzerTriggrt;
+  27          bit ResetWifiTrigger;
+  28          bit ResetWifiOnOff;
+  29          bit ENTM;           //WIFIÄ£¿éÍ¸´«ºÍ´®¿ÚÃüÁîÄ£Ê½ÇÐ»»Î»
+  30          bit Com1HaveDate;
+  31          //Éí·ÝÖ¤´¢´æ»®·Ö´¢´æµØÖ·±í,Ã¿ÌõÐÅÏ¢Õ¼ÓÃ20×Ö½Ú
+  32          //Éí·ÝÖ¤´¢´æ¸ù¾ÝÉí·ÝÖ¤ºÅ×îºóÒ»Î»Ð£ÑéÂë»®·ÖÎª11¸öÇøÓò£¬Ã¿¸öÇøÓò128KB Ã¿ÌõÉí·ÝÖ¤ÐÅÏ¢¼ÓÉÏÊ±¼ä20¸ö×Ö½Ú
+  33          //Ã¿¸öÇøÓò¹²¿ÉÒÔ´¢´æ6553-3ÌõÐÅÏ¢£¬ÕâÀïÇ°3*20=60×Ö½ÚÓÃÀ´´¢´æ¸½¼ÓµÄÐÅÏ¢£¬±ÈÈçµ±Ç°ÇøÓòµÄ´¢´æÊýÁ¿¡£Ã¿¸öÇøÓò128
+             -KB¹²Õ¼ÓÃ1408KB¿Õ¼ä
+  34          const unsigned long int code Id_StoreAddrTable[11][2] = {{0x000000,0x1ffff},{0x20000,0x3ffff},{0x40000,0x5
+             -ffff},{0x60000,0x7ffff},
+  35          {0x80000,0x9ffff},{0xa0000,0xbffff},{0xc0000,0xdffff},{0xe0000,0xfffff},{0x100000,0x11ffff},{0x120000,0x13
+             -ffff},{0x140000,0x15ffff}};
+  36          //¶þÎ¬Âë´¢´æ»®·Ö´¢´æµØÖ·±í£¬Ã¿ÌõÐÅÏ¢Õ¼ÓÃ10×Ö½Ú
+  37          //¶þÎ¬Âë´¢´æ¸ù¾ÝÊÖ»úºÅÀÛ¼ÓµÃµ½Ò»¸öintÐÍÊý¾ÝÈ¡µÍ4Î»×÷Îª·ÖÀàÒÀ¾Ý0x00-0x0f(16¸ö·ÖÀà)
+  38          //Ã¿¸öÇøÓò¹²¿ÉÒÔ´¢´æ6553-3ÌõÐÅÏ¢£¬ÕâÀïÇ°3*10=30×Ö½ÚÓÃÀ´´¢´æ¸½¼ÓµÄÐÅÏ¢£¬±ÈÈçµ±Ç°ÇøÓòµÄ´¢´æÊýÁ¿¡£Ã¿¸öÇøÓò64K
+             -B¹²Õ¼ÓÃ1024KB¿Õ¼ä
+  39          const unsigned long int code ErWeiMa_AddrTable[16][2] = {{0x160000,0x16ffff},{0x170000,0x17ffff},{0x180000
+             -,0x18ffff},{0x190000,0x19ffff},
+  40          {0x1a0000,0x1affff},{0x1b0000,0x1bffff},{0x1c0000,0x1cffff},{0x1d0000,0x1dffff},{0x1e0000,0x1effff},{0x1f0
+             -000,0x1fffff},{0x200000,0x20ffff},
+  41          {0x210000,0x21ffff},{0x220000,0x22ffff},{0x230000,0x23ffff},{0x240000,0x24ffff},{0x250000,0x25ffff}};
+  42          
+  43          unsigned int Exint0Counter = 0;           //Íâ²¿ÖÐ¶Ï0½ÓÊÜÊý¾Ý¼ÆÊýÆ÷
+  44          unsigned char Exint0DataBuffer[600] = {0};
+  45          unsigned char Com1DataBuffer[600] = {0};
+  46          unsigned int Com1DataCounter = 0;
+  47          unsigned char System_ID[6]={0x03,0x71,0x00,0x01,0x00,0x01};
+  48          const unsigned char code WifiInterSerialConfigModeCMD[4] = {'+','+','+','a'};/*+++ a*/
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 2   
+
+  49          const unsigned char code WifiInterTmModeCMD[8] = {'A','T','+','E','N','T','M',0x0d};/*AT+ENTM<CR>*/
+  50          const unsigned char code AppVersionNum[4] = {0x20,0x16,0x06,0x14};/*Õ¢»ú³ÌÐò°æ±¾±àºÅV2016.6.01*/
+  51          const unsigned char code FE_START[2]={0x55,0xaa};//Ö¡Í·
+  52          const unsigned char code FE_START_ACK[2]={0xaa,0x55};//»Ø¸´ÉÏÎ»»úµÄÖ¡Í·
+  53          const unsigned char code CMD_Heartbeat[2]={0x00,0x01};/*ÐÄÌø°üÃüÁî*/
+  54          //const unsigned char code CMD_ServerAck[2]={0x01,0x01};/*ºÍ·þÎñÆ÷Í¨ÐÅ³¬Ê±ÖØÆôWIFI*/
+  55          const unsigned char code CMD_ReStart[2]={0x00,0x02};/*ÖØÆôÃüÁî*/
+  56          const unsigned char code CMD_UpdateSystem[2]={0x00,0x06};/*Éý¼¶ÃüÁî*/
+  57          const unsigned char code CMD_DownLoadUerID[2]={0x30,0x01};/*ÏÂÔØÉí·ÝÖ¤ÐÅÏ¢*/
+  58          const unsigned char code CMD_DownLoadErWerMa[2]={0x40,0x01};/*ÏÂÔØ¶þÎ¬ÂëÐÅÏ¢*/
+  59          const unsigned char code CMD_DeleteErWeiMa[2]={0x40,0x02};/*É¾³ýµ¥Ìõ¶þÎ¬ÂëÐÅÏ¢*/
+  60          const unsigned char code CMD_DeleteID[2]={0x30,0x02};/*É¾³ýµ¥ÌõÉí·ÝÖ¤ÐÅÏ¢*/
+  61          const unsigned char code CMD_DeleteAllErWeiMa[2]={0x40,0x03};/*É¾³ýËùÓÐ¶þÎ¬ÂëÐÅÏ¢*/
+  62          const unsigned char code CMD_DeleteAllID[2]={0x30,0x03};/*É¾³ýËùÓÐÉí·ÝÖ¤ÐÅÏ¢*/
+  63          const unsigned char code CMD_SearchUerID[2]={0x80,0x01};/*ËÑË÷ÓÎ¿ÍÉí·ÝÖ¤ÐÅÏ¢*/
+  64          const unsigned char code CMD_SearchErWerMa[2]={0x70,0x01};/*ËÑË÷ÓÎ¿Í¶þÎ¬ÂëÐÅÏ¢*/
+  65          const unsigned char code CMD_AskAppVersionNum_Top[2]={0x60,0x01};/*²éÑ¯Õ¢»úÉÏ°åÈí¼þ°æ±¾ºÅ*/
+  66          const unsigned char code CMD_AskAppVersionNum_Bottom[2]={0x60,0x02};/*²éÑ¯Õ¢»úÏÂ°åÈí¼þ°æ±¾ºÅ*/
+  67          const unsigned char code CMD_WifiSerialConfigMode[2]={0xf8,0x01};/*½øÈëWIFI´®¿ÚÅäÖÃÄ£Ê½ÃüÁî*/
+  68          const unsigned char code CMD_Buzzer[2]={0xff,0xff};/*·äÃùÆ÷ÃüÁî*/
+  69          const unsigned char code CMD_DoorTrigger[2]={0xfe,0xfe};/*ÄÚ²¿¿ªÕ¢ÃüÁî*/
+  70          const unsigned char code CMD_SetSystemId[2]={0xff,0x01};/*Õ¢»úIDÉèÖÃÃüÁî*/
+  71          const unsigned char code CMD_nReloadWifi[2]={0xff,0x02};/*Õ¢»úÖØÖÃWIFIÃüÁî*/
+  72          unsigned char UART_Fe_Seq  = 0;           //Ö¡ÐòºÅ
+  73          unsigned char CommonDataBuffer[600]={0};  //Êý¾Ý»º´æÊý×é
+  74          void Exint0_DATA_deal(void);
+  75          void USART1_Send(unsigned char *dat,unsigned int len);
+  76          void USART4_Send(unsigned char *dat,unsigned int len);
+  77          void Arraycat(unsigned char *Data_Dest,unsigned char *Data_Src,unsigned int DestDataNum,unsigned int SrcDa
+             -taNum);
+  78          unsigned int Fe_data_Organize(unsigned char CMD[],unsigned char Data[],unsigned int DataNum,bit OrgType);
+  79          char Muti_Read_Byte(void);
+  80          void WifiSeiralConfigMode(void);
+  81          void Muti_Send_Byte(unsigned char *Data,unsigned int len);
+  82          void Reply_State(unsigned char CMD[],unsigned char  State);
+  83           bit Delete_Id_Info(UCHAR *IdData);
+  84          UCHAR Delete_IdOrErWeiMa_Info(UCHAR *IdData,bit SecletFlag);
+  85          unsigned long int Search_IdOrErWeiMa_Info(UCHAR *Data,bit SecletFlag);
+  86          unsigned char Store_IdOrErWeiMa_Data(unsigned char *Data,bit SecletFlag);
+  87          void Delay_ms(UINT ms);
+  88          void Delay_us(UINT ms);
+  89          
+  90          
+  91          void main(void){
+  92   1      //  UCHAR Test[3]={0x88,0x01,0x02};
+  93   1        
+  94   1      IO_Init();
+  95   1      init_Uart();
+  96   1      Timer0Init();
+  97   1      INT_Init();
+  98   1      System_SetParaInit();
+  99   1      EA=1;
+ 100   1      //    USART_Send(Test,sizeof(Test),1);
+ 101   1          Delay_ms(100);
+ 102   1          BuzzerTriggrt = 1;
+ 103   1      
+ 104   1      
+ 105   1      while(1){
+ 106   2      //    Delay_ms(1000);
+ 107   2      //    SBUF = 0xaf;while(!(SCON&0x02));SCON &= ~0x02;
+ 108   2      //if(Com1DataCounter != 0){
+ 109   2      //  Muti_Send_Byte(Com1DataBuffer,Com1DataCounter);   //½«ÉÏÎ»»úµÄÊý¾ÝÖ±½ÓÏÂ·¢µ½ÏÂÃæµÄµ¥Æ¬»ú
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 3   
+
+ 110   2      //  Com1DataCounter=0;
+ 111   2      //  memset(Com1DataBuffer,0x00,600);
+ 112   2      //}
+ 113   2        
+ 114   2        P34 = 1;
+ 115   2        ENTM = 1;
+ 116   2      if(HeartbeatTrigger == 1)
+ 117   2      {
+ 118   3        UART_Fe_Seq++;
+ 119   3        USART1_Send(CommonDataBuffer,Fe_data_Organize(CMD_Heartbeat,&ReplySucc,1,0));
+ 120   3        HeartbeatTrigger = 0;
+ 121   3      }
+ 122   2      
+ 123   2      if(ResetWifiTrigger == 1)
+ 124   2      { /*ÓÉÐìÖ¾¼á½ûÖ¹ÁËÃ»ÓÐÊÕµ½·þÎñÆ÷µÄÃüÁî¶øÖØÆôWiFiµÄ¹¦ÄÜ*/
+ 125   3        //nResetWifi = 0;   
+ 126   3        //Delay_ms(500);
+ 127   3        //nResetWifi = 1;
+ 128   3        //ResetWifiOnOff  = 0;//¹Ø±ÕWIFIÖØÖÃ¿ª¹Ø£¬WIFIÖØÆôÒÔºó£¬±ØÐë¹Ø±ÕÖØÖÃ¿ª¹Ø·ÀÖ¹WIFIÄ£¿éÁ¬½Ó·þÎñÆ÷¹ý³ÌÖÐÔÙ´ÎÖ
+             -ØÆô¡£
+ 129   3        ResetWifiTrigger = 0;
+ 130   3      }
+ 131   2      
+ 132   2      if(Com1HaveDate)
+ 133   2      {
+ 134   3        USART4_Send(Com1DataBuffer,Com1DataCounter);
+ 135   3        Com1DataCounter=0;
+ 136   3        memset(Com1DataBuffer,0x00,600);
+ 137   3        Com1HaveDate = 0;
+ 138   3      }
+ 139   2      
+ 140   2      
+ 141   2      if(Exint0Counter != 0)
+ 142   2      {
+ 143   3        Exint0_DATA_deal();
+ 144   3      }
+ 145   2      
+ 146   2        }
+ 147   1      
+ 148   1      }
+ 149          
+ 150          /****************************************************/
+ 151          /* ¶¨Ê±Æ÷0ÖÐ¶ÏÈë¿Úº¯Êý                      */
+ 152          /* ³ÌÐò¹¦ÄÜ£º¶¨Ê±Æ÷0ÖÐ¶Ï´¦Àíº¯Êý*/
+ 153          /* Èë¿Ú²ÎÊý:ÎÞ                    */
+ 154          /* ³ö¿Ú²ÎÊý:ÎÞ                    */
+ 155          /****************************************************/
+ 156          void Timer0_intrupt_function(void) interrupt 1 using 1
+ 157          { 
+ 158   1        //ÐÄÌø°üÉè¶¨
+ 159   1        if(HeartbeatTrigger == 0)
+ 160   1       {
+ 161   2         HeartbeatPacketCounter++;
+ 162   2          if(HeartbeatPacketCounter > HeartbeatTime){
+ 163   3          HeartbeatTrigger = 1;
+ 164   3          HeartbeatPacketCounter = 0;
+ 165   3          }
+ 166   2       }
+ 167   1         //·äÃùÆ÷Éè¶¨
+ 168   1          if(BuzzerTriggrt == 1)
+ 169   1         {
+ 170   2           Buzzer = 0;
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 4   
+
+ 171   2           BuzzerCounter++;
+ 172   2            if(BuzzerCounter > BuzzerTime){
+ 173   3            Buzzer = 1;
+ 174   3            BuzzerTriggrt = 0;
+ 175   3            BuzzerCounter = 0; 
+ 176   3            }
+ 177   2         }
+ 178   1          //·þÎñÆ÷Ñ¯ÎÊ³¬Ê±
+ 179   1         if(ResetWifiOnOff){
+ 180   2          if(ResetWifiTrigger == 0)
+ 181   2         {
+ 182   3            ResetWifiCounter++;
+ 183   3            if(ResetWifiCounter > ResetWifiTime){
+ 184   4            ResetWifiTrigger = 1;
+ 185   4            ResetWifiCounter = 0;
+ 186   4            }
+ 187   3         }
+ 188   2       }
+ 189   1       }
+ 190          
+ 191          
+ 192          void com1_isr(void) interrupt 4 using 1
+ 193          {
+ 194   1      unsigned char dat;
+ 195   1        if(SCON&0x01)      /*½ÓÊÕ*/
+ 196   1          {
+ 197   2              dat = SBUF;
+ 198   2              P34 = 0;      //°å×ÓÉÏµÄÖ¸Ê¾µÆ
+ 199   2              SCON &=~0x01;
+ 200   2            if(ENTM)        //Í¸´«Ä£Ê½
+ 201   2            {
+ 202   3              if(!CHKREQ)
+ 203   3              {
+ 204   4              REQ = 1;                              //ÖÃREQÎªÓÐÐ§
+ 205   4              if(!CHKREQ)
+ 206   4              {
+ 207   5                P2M1 = 0x00;                        //P2ÎªÊä³ö
+ 208   5                P2M0 = 0xff;
+ 209   5                P1M1 |= (1<<2);
+ 210   5                P1M0 &= ~(1<<2);                    //CHACK³õÊ¼»¯ÎªÊäÈë
+ 211   5                P2 = dat;                           //½«Êý¾ÝËÍµ½P2¶Ë¿Ú
+ 212   5                Delay_us(10);
+ 213   5                STB = ~STB;
+ 214   5                while(CHACK);
+ 215   5              REQ = 0;    
+ 216   5              }else REQ = 0;
+ 217   4              }
+ 218   3              REQ = 0;
+ 219   3              P2M1 = 0xff;
+ 220   3              P2M0 = 0x00;    //³õÊ¼»¯P2ÎªÊäÈë            
+ 221   3            }else
+ 222   2                {     
+ 223   3                  Com1HaveDate = 1;     
+ 224   3                  Com1DataBuffer[Com1DataCounter++] = dat;
+ 225   3                }
+ 226   2      
+ 227   2          }     
+ 228   1      }
+ 229          
+ 230          void com2_isr(void) interrupt 8 using 1
+ 231          { 
+ 232   1        if(S2CON&0X01)  /*½ÓÊÕ*/
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 5   
+
+ 233   1         {S2CON &=~0X01;}     
+ 234   1      }
+ 235          
+ 236          void com3_isr(void) interrupt 17 using 1
+ 237          {
+ 238   1        if(S3CON&0X01)  /*½ÓÊÕ*/
+ 239   1        { S3CON &=~0X01;}                  
+ 240   1      }
+ 241          
+ 242          void com4_isr(void) interrupt 18 using 1
+ 243          {
+ 244   1        if(S4CON&0X01)  /*½ÓÊÕ*/
+ 245   1          { S4CON &=~0X01;}                  
+ 246   1      }
+ 247          
+ 248          void Exint0() interrupt 0 
+ 249          {
+ 250   1        Exint0DataBuffer[Exint0Counter++] = Muti_Read_Byte();
+ 251   1        if(Exint0Counter>600) {Exint0Counter=0;}
+ 252   1      }
+ 253          
+ 254          
+ 255          void Exint0_DATA_deal(void){
+ 256   1      unsigned int i = 0,j= 0,DataLength = 0;
+ 257   1      unsigned int LastUpdatePacFlag = 0,FE_CS = 0;
+ 258   1      unsigned long int DeleAddr = 0;
+ 259   1      unsigned char  flag = 0,CS = 0,HeadState = 0,TempBuffer[6] = {0x00};
+ 260   1        Delay_ms(100);
+ 261   1      
+ 262   1        if(((Exint0DataBuffer[0] == FE_START[0])&&(Exint0DataBuffer[1] == FE_START[1])) || ((Exint0DataBuffer[0] 
+             -== FE_START_ACK[0]) && (Exint0DataBuffer[1] == FE_START_ACK[1]) )){
+ 263   2              DataLength = Exint0DataBuffer[FE_LENGTH]*0x100+Exint0DataBuffer[FE_LENGTH+1];
+ 264   2              FE_CS=DataLength+FE_DATAADDR;/*Ö¸ÏòÐ£ÑéÂëµÄÎ»ÖÃ*/
+ 265   2          for(i=0;i<FE_DATAADDR+DataLength;i++)
+ 266   2          CS+=Exint0DataBuffer[i];
+ 267   2      
+ 268   2            for(i=0,j=0;i<6,j<6;i++,j++){
+ 269   3            if(System_ID[j] == Exint0DataBuffer[SYSTEM_ID]+i)                             //ÅÐ¶ÏÊÇ·ñÊÇ±¾»ú±àºÅ
+ 270   3              flag++;
+ 271   3        }
+ 272   2      //  SBUF = 0x8d;while(!(SCON&0x02));SCON &=~0x02;_nop_();
+ 273   2        if(CS == Exint0DataBuffer[FE_CS]){
+ 274   3      //  for(i=0;i<Exint0Counter;i++){
+ 275   3      //SBUF = Exint0DataBuffer[i];while(!(SCON&0x02));SCON &=~0x02;
+ 276   3      //}
+ 277   3      //  SBUF = 0xf9;while(!(SCON&0x02));SCON &=~0x02;
+ 278   3          UART_Fe_Seq = Exint0DataBuffer[FE_CODENUM];               //¼ÍÂ¼Ö¡ÐòºÅ
+ 279   3          //·äÃùÆ÷
+ 280   3            if((CMD_Buzzer[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_Buzzer[1] ==  Exint0DataBuffer[FE_MESS
+             -TYPEADDR+1]))
+ 281   3            { 
+ 282   4              switch(Exint0DataBuffer[FE_DATAADDR])
+ 283   4                {
+ 284   5                case 0x01 :
+ 285   5                    BuzzerTime = BuzzerTimeNormal;
+ 286   5                    break;
+ 287   5                case 0x02 :
+ 288   5                    BuzzerTime = BuzzerTimeLong;
+ 289   5                    break;
+ 290   5                case 0x03:
+ 291   5                    BuzzerTime = BuzzerTimeShort;
+ 292   5                    break;
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 6   
+
+ 293   5                default:
+ 294   5                    BuzzerTime = BuzzerTimeNormal;              
+ 295   5                }
+ 296   4              BuzzerTriggrt = 1;
+ 297   4            }//½øÈëWIFI´®¿ÚÅäÖÃÄ£Ê½
+ 298   3            else if((CMD_WifiSerialConfigMode[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_WifiSerialConfigMod
+             -e[1] ==  Exint0DataBuffer[FE_MESSTYPEADDR+1]))
+ 299   3            {
+ 300   4              WifiSeiralConfigMode();
+ 301   4              Reply_State(CMD_WifiSerialConfigMode,1);
+ 302   4            }   
+ 303   3            //·þÎñÆ÷Ñ¯ÎÊ³¬Ê±£¬ÖØÖÃWIFIÄ£¿é
+ 304   3            else if((CMD_Heartbeat[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_Heartbeat[1] ==  Exint0DataBuf
+             -fer[FE_MESSTYPEADDR+1]))
+ 305   3            {
+ 306   4              if(ResetWifiOnOff == 0){
+ 307   5              ResetWifiOnOff  = 1;//´ò¿ªWIFIÖØÖÃ¿ª¹Ø
+ 308   5              }
+ 309   4              ResetWifiCounter = 0;//¼ÆÊýÆ÷ÇåÁã´ÓÍ·¿ªÊ¼¼ÆÊ±
+ 310   4              //Reply_State(CMD_ServerAck,1);
+ 311   4            }
+ 312   3            //²éÑ¯ÉÏ°åÈí¼þ°æ±¾ºÅ
+ 313   3            else if((CMD_AskAppVersionNum_Top[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_AskAppVersionNum_To
+             -p[1] ==  Exint0DataBuffer[FE_MESSTYPEADDR+1])){
+ 314   4                USART1_Send(Exint0DataBuffer,Exint0Counter);
+ 315   4            }
+ 316   3            //²éÑ¯ÏÂ°åÈí¼þ°æ±¾ºÅ
+ 317   3            else if((CMD_AskAppVersionNum_Bottom[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_AskAppVersionNum
+             -_Bottom[1] ==  Exint0DataBuffer[FE_MESSTYPEADDR+1])){
+ 318   4              USART1_Send(CommonDataBuffer,Fe_data_Organize(CMD_AskAppVersionNum_Bottom,AppVersionNum,4,1));
+ 319   4            }//É¾³ýËùÓÐÉí·ÝÖ¤
+ 320   3            else if((CMD_DeleteAllID[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_DeleteAllID[1] ==  Exint0Dat
+             -aBuffer[FE_MESSTYPEADDR+1])){
+ 321   4              for(DeleAddr=Id_StoreAddrTable[0][0];DeleAddr<Id_StoreAddrTable[10][1];DeleAddr+=0x10000){
+ 322   5      //          SBUF = 0x87;while(!(SCON&0x02));SCON &=~0x02;
+ 323   5                sFLASH_64KBEraseSector(DeleAddr);
+ 324   5      //          SBUF = 0x88;while(!(SCON&0x02));SCON &=~0x02;
+ 325   5                
+ 326   5              }
+ 327   4                Reply_State(CMD_DeleteAllID,1);
+ 328   4            }
+ 329   3            //É¾³ýËùÓÐ¶þÎ¬Âë
+ 330   3            else if((CMD_DeleteAllErWeiMa[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_DeleteAllErWeiMa[1] == 
+             - Exint0DataBuffer[FE_MESSTYPEADDR+1]))
+ 331   3              {
+ 332   4                for(DeleAddr=ErWeiMa_AddrTable[0][0];DeleAddr<ErWeiMa_AddrTable[15][1];DeleAddr+=0x10000){
+ 333   5                sFLASH_64KBEraseSector(DeleAddr);
+ 334   5                }
+ 335   4                Reply_State(CMD_DeleteAllErWeiMa,1);
+ 336   4            }
+ 337   3              //ËÑË÷ÓÎ¿ÍÉí·ÝÖ¤ÐÅÏ¢
+ 338   3            else if((CMD_SearchUerID[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_SearchUerID[1] ==  Exint0Dat
+             -aBuffer[FE_MESSTYPEADDR+1]))
+ 339   3            { 
+ 340   4              if(Search_IdOrErWeiMa_Info(&Exint0DataBuffer[FE_DATAADDR],1)!=0){
+ 341   5              Delay_ms(100);
+ 342   5      //        for(i=0;i<j;i++){
+ 343   5      //          SBUF = CommonDataBuffer[i];while(!(SCON&0x02));SCON &=~0x02;_nop_();
+ 344   5      //        }
+ 345   5              Muti_Send_Byte(CommonDataBuffer,Fe_data_Organize(CMD_DoorTrigger,&CS,1,1));//·¢¸øÏÂ°å¿ªÕ¢
+ 346   5              BuzzerTriggrt = 1;
+ 347   5            }
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 7   
+
+ 348   4      
+ 349   4            }/*ËÑË÷ÓÎ¿Í¶þÎ¬ÂëÐÅÏ¢*/
+ 350   3            else if((CMD_SearchErWerMa[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_SearchErWerMa[1] ==  Exint
+             -0DataBuffer[FE_MESSTYPEADDR+1]))
+ 351   3            { 
+ 352   4              if(Search_IdOrErWeiMa_Info(&Exint0DataBuffer[FE_DATAADDR],0)!=0){
+ 353   5              Delay_ms(100);
+ 354   5              Muti_Send_Byte(CommonDataBuffer,Fe_data_Organize(CMD_DoorTrigger,&CS,1,1));//·¢¸øÏÂ°å¿ªÕ¢
+ 355   5              BuzzerTriggrt = 1;
+ 356   5            }
+ 357   4      
+ 358   4            }//ÖØÆô
+ 359   3            else if((CMD_ReStart[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_ReStart[1] ==  Exint0DataBuffer[
+             -FE_MESSTYPEADDR+1]))
+ 360   3            { 
+ 361   4              BuzzerTriggrt = 1;
+ 362   4              Reply_State(CMD_ReStart,1);
+ 363   4              Delay_ms(1000);     
+ 364   4              IAP_CONTR = 0x20;
+ 365   4            }//ÉèÖÃÕ¢»úIDºÅ
+ 366   3            else if((CMD_SetSystemId[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_SetSystemId[1] ==  Exint0Dat
+             -aBuffer[FE_MESSTYPEADDR+1]))
+ 367   3            { 
+ 368   4              if(Exint0DataBuffer[FE_DATAADDR] == 0x31){
+ 369   5              Reply_State(CMD_SetSystemId,1);
+ 370   5              }else{
+ 371   5                FLASH_W25Q64_Update (System_SetParaAddr, &Exint0DataBuffer[FE_DATAADDR], sizeof(System_ID));//¸üÐÂÏµÍ
+             -³IDÐÅÏ¢
+ 372   5      //            for(i=0;i<sizeof(System_ID);i++){
+ 373   5      //          System_ID[i] = Exint0DataBuffer[FE_DATAADDR+i];
+ 374   5      //          }
+ 375   5            }
+ 376   4                  Reply_State(CMD_SetSystemId,1);
+ 377   4            }else if(CMD_nReloadWifi[0] == Exint0DataBuffer[FE_MESSTYPEADDR] &&  CMD_nReloadWifi[1] == Exint0DataBu
+             -ffer[FE_MESSTYPEADDR+1]){
+ 378   4      //          SBUF = 0x9d;while(!(SCON&0x02));SCON &=~0x02;_nop_();
+ 379   4                BuzzerTriggrt = 1;
+ 380   4                nReloadWifi = 0;
+ 381   4                Delay_ms(3000);
+ 382   4                nReloadWifi = 1;
+ 383   4                Delay_ms(500);//¸´Î»WIFIÄ£¿é
+ 384   4                Reply_State(CMD_nReloadWifi,1);
+ 385   4                BuzzerTriggrt = 1;
+ 386   4              }//Éý¼¶
+ 387   3            else if((CMD_UpdateSystem[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_UpdateSystem[1] ==  Exint0D
+             -ataBuffer[FE_MESSTYPEADDR+1]))
+ 388   3            { 
+ 389   4              ResetWifiOnOff  = 0;//Éý¼¶¹Ø±ÕWIFIÖØÖÃ
+ 390   4              if(Exint0DataBuffer[FE_DATAADDR] == 0x01){
+ 391   5                  if(Exint0DataBuffer[FE_DATAADDR+4]==Exint0DataBuffer[FE_DATAADDR+6]){//×îºóÒ»¸öÉý¼¶°ü
+ 392   6                    if(sequential_write_flash_in_one_sector(SysCordAppSaveStartTempAddr+(Exint0DataBuffer[FE_DATAADDR+6
+             -]-1)*0x200, 512, &Exint0DataBuffer[FE_DATAADDR+9])){
+ 393   7                    FLASH_PageErase(SysCordAppUpdataAddrFlag);
+ 394   7                    FLASH_ByteWrite(SysCordAppUpdataAddrFlag, 0x5A);//Ð´Éý¼¶±êÖ¾
+ 395   7                    FLASH_ByteWrite(SysCordAppUpdataAddrFlag+1, 0xA5);
+ 396   7                    FLASH_ByteWrite(SysCordAppUpdataAddrFlag+2, Exint0DataBuffer[FE_DATAADDR+4]);//¼ÍÂ¼Éý¼¶Êý¾Ý°ü¸öÊý
+ 397   7                    BuzzerTriggrt = 1;
+ 398   7                    Reply_State(CMD_UpdateSystem,1);
+ 399   7                    Delay_ms(1000);
+ 400   7                    IAP_CONTR = 0x20;//ÖØÆô½øÈëÉý¼¶
+ 401   7                  }
+ 402   6                }else{      
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 8   
+
+ 403   6                      if(sequential_write_flash_in_one_sector(SysCordAppSaveStartTempAddr+(Exint0DataBuffer[FE_DATAADDR+
+             -6]-1)*0x200, 512, &Exint0DataBuffer[FE_DATAADDR+9])){
+ 404   7                      BuzzerTime = BuzzerTimeShort;
+ 405   7                      BuzzerTriggrt = 1;
+ 406   7                      Reply_State(CMD_UpdateSystem,1);
+ 407   7                    }
+ 408   6                  }
+ 409   5              }else if(Exint0DataBuffer[FE_DATAADDR] == 0x31){        
+ 410   5              BuzzerTriggrt = 1;
+ 411   5              Reply_State(CMD_UpdateSystem,1);
+ 412   5              }
+ 413   4            }//ÏÂÔØÉí·ÝÖ¤       
+ 414   3            else if((CMD_DownLoadUerID[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_DownLoadUerID[1] ==  Exint
+             -0DataBuffer[FE_MESSTYPEADDR+1]))
+ 415   3            {
+ 416   4              if(Exint0DataBuffer[FE_DATAADDR] == 0x01){
+ 417   5              if(Store_IdOrErWeiMa_Data(&Exint0DataBuffer[FE_DATAADDR+1],1) == 0x01){
+ 418   6              Reply_State(CMD_DownLoadUerID,1);
+ 419   6              }
+ 420   5            }else {
+ 421   5              Reply_State(CMD_DownLoadUerID,1);
+ 422   5            }
+ 423   4            }
+ 424   3            //É¾³ýÉí·ÝÖ¤
+ 425   3            else if((CMD_DeleteID[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_DeleteID[1] ==  Exint0DataBuffe
+             -r[FE_MESSTYPEADDR+1]))
+ 426   3            {
+ 427   4                if(Exint0DataBuffer[FE_DATAADDR] == 0x01){
+ 428   5                  if(Delete_IdOrErWeiMa_Info(&Exint0DataBuffer[FE_DATAADDR+1],1) == 0x01){
+ 429   6                  Reply_State(CMD_DeleteID,1);
+ 430   6                  }
+ 431   5                }else {
+ 432   5                Reply_State(CMD_DeleteID,1);
+ 433   5              }
+ 434   4            }
+ 435   3            //ÏÂÔØ¶þÎ¬Âë
+ 436   3            else if((CMD_DownLoadErWerMa[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_DownLoadErWerMa[1] ==  E
+             -xint0DataBuffer[FE_MESSTYPEADDR+1]))
+ 437   3            {
+ 438   4              if(Exint0DataBuffer[FE_DATAADDR] == 0x01){
+ 439   5                if(Store_IdOrErWeiMa_Data(&Exint0DataBuffer[FE_DATAADDR+1],0) == 0x01){
+ 440   6                Reply_State(CMD_DownLoadErWerMa,1);
+ 441   6                }
+ 442   5            }else {
+ 443   5                Reply_State(CMD_DownLoadErWerMa,1);
+ 444   5              }
+ 445   4          }//É¾³ý¶þÎ¬Âë
+ 446   3            else if((CMD_DeleteErWeiMa[0] ==  Exint0DataBuffer[FE_MESSTYPEADDR]) && (CMD_DeleteErWeiMa[1] ==  Exint
+             -0DataBuffer[FE_MESSTYPEADDR+1]))
+ 447   3              {
+ 448   4                  if(Exint0DataBuffer[FE_DATAADDR] == 0x01){
+ 449   5                    if(Delete_IdOrErWeiMa_Info(&Exint0DataBuffer[FE_DATAADDR+1],0) == 0x01){
+ 450   6                      Reply_State(CMD_DeleteErWeiMa,1);
+ 451   6                      }
+ 452   5                }else {
+ 453   5                    Reply_State(CMD_DeleteErWeiMa,1);
+ 454   5                    }
+ 455   4              } 
+ 456   3              else  
+ 457   3                {
+ 458   4                  USART1_Send(Exint0DataBuffer,Exint0Counter);
+ 459   4                }
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 9   
+
+ 460   3              }
+ 461   2            }   
+ 462   1        memset(Exint0DataBuffer,0x00,600);
+ 463   1        Exint0Counter = 0;
+ 464   1      }
+ 465          
+ 466          
+ 467          
+ 468          
+ 469          
+ 470          //»Ø¸´ÉÏÎ»»ú
+ 471          void Reply_State(unsigned char CMD[],unsigned char  State){
+ 472   1      unsigned int Reply_Num = 0;
+ 473   1      unsigned char const ReplySucc = 0x31;   
+ 474   1      unsigned char const ReplyFail = 0x30;
+ 475   1      //        SBUF = 0xaf;while(!(SCON&0x02));SCON &= ~0x02;
+ 476   1        if(State == 1){
+ 477   2          Reply_Num =  Fe_data_Organize(CMD,&ReplySucc,1,0);
+ 478   2          USART1_Send(CommonDataBuffer,Reply_Num);
+ 479   2      }else if(State == 0){
+ 480   2          Reply_Num =  Fe_data_Organize(CMD,&ReplyFail,1,0);
+ 481   2          USART1_Send(CommonDataBuffer,Reply_Num);
+ 482   2      }
+ 483   1        memset(CommonDataBuffer,0x00,600);
+ 484   1      }
+ 485          
+ 486          //´¢´æÐÅÏ¢
+ 487          unsigned char Store_IdOrErWeiMa_Data(unsigned char *Data,bit SecletFlag){
+ 488   1      UINT  i=0;
+ 489   1      UINT  ItemCounter=0;//¸ÃÇøÓòµÄÓÃ»§ÐÅÏ¢ÊýÁ¿
+ 490   1      UCHAR ItemCounterBuffer[2] = {0},Cursor = 0;
+ 491   1      UCHAR TempIdBuffer[20]={0};
+ 492   1      UCHAR StoreErWeiMaBuffer[10]={0};
+ 493   1      UCHAR AttachData[4]={0xff,0xff,0xff,0xff};
+ 494   1      //Éí·ÝÖ¤
+ 495   1      if(SecletFlag){
+ 496   2      for(i=0;i<16;i++)
+ 497   2        {
+ 498   3          TempIdBuffer[i] = *Data++;  //ÔÝ´æµÚÒ»ÌõÐÅÏ¢
+ 499   3        }
+ 500   2        Arraycat(TempIdBuffer,AttachData,16,4); //Ìí¼Ó¸½¼ÓÐÅÏ¢
+ 501   2        Cursor = TempIdBuffer[8];
+ 502   2        if(Search_IdOrErWeiMa_Info(TempIdBuffer,1) == 0){//ÐÅÏ¢²»´æÔÚÔòÌí¼Ó
+ 503   3          ItemCounter = FLASH_W25Q64_ByteRead(Id_StoreAddrTable[Cursor&= 0x0f][0])*256+FLASH_W25Q64_ByteRead(Id_St
+             -oreAddrTable[Cursor&= 0x0f][0]+1);//¶ÁÈ¡¸ÃÇøÓò´¢´æµÄÐÅÏ¢×ÜÁ¿
+ 504   3      //     SBUF = 0xa5;while(!(SCON&0x02));SCON &= ~0x02;
+ 505   3        //¸ù¾ÝÉí·ÝÖ¤Ð£ÑéÂë10ÖÖ·ÖÀà´¢´æ²»Í¬µÄÇøÓò
+ 506   3          if(ItemCounter == 0xffff)//³õÊ¼»¯¹¤×÷
+ 507   3          ItemCounter = 0;
+ 508   3      
+ 509   3          FLASH_W25Q64_Write ( Id_StoreAddrTable[Cursor&= 0x0f][0]+ItemCounter*20+60,TempIdBuffer, 20);//ÔÚÎ²²¿×·¼
+             -ÓÐÅÏ¢ Ã¿¸öÇøÓòÇ°60×Ö½ÚÔ¤Áô
+ 510   3      
+ 511   3          ItemCounter ++;//ÊýÁ¿Ôö¼Ó1
+ 512   3        //  SBUF = 0xa6;while(!(SCON&0x02));SCON &= ~0x02;
+ 513   3          ItemCounterBuffer[0] = (ItemCounter & 0xff00)>>8;
+ 514   3          ItemCounterBuffer[1] = ItemCounter & 0x00ff;
+ 515   3          FLASH_W25Q64_Update (Id_StoreAddrTable[Cursor&= 0x0f][0], ItemCounterBuffer, 2);//¸üÐÂÊýÁ¿ÐÅÏ¢
+ 516   3      //             SBUF = 0xa2;while(!(SCON&0x02));SCON &= ~0x02;
+ 517   3              FLASH_W25Q64_Read(CommonDataBuffer,Id_StoreAddrTable[Cursor&= 0x0f][0],600);//¶ÁÈë»º³åÇø
+ 518   3      //      for(i=0;i<600;i++){
+ 519   3      //       SBUF = CommonDataBuffer[i];while(!(SCON&0x02));SCON &= ~0x02;_nop_();_nop_();
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 10  
+
+ 520   3      //      }
+ 521   3      //   SBUF = 0xa7;while(!(SCON&0x02));SCON &= ~0x02;
+ 522   3        }else{
+ 523   3          return 1;
+ 524   3        }
+ 525   2        return 1;
+ 526   2      }else if(!SecletFlag)
+ 527   1      //¶þÎ¬Âë
+ 528   1      {
+ 529   2      for(i=0;i<6;i++)
+ 530   2        {
+ 531   3          StoreErWeiMaBuffer[i] = *Data++;  //ÔÝ´æµÚÒ»ÌõÐÅÏ¢
+ 532   3        }
+ 533   2          Arraycat(StoreErWeiMaBuffer,AttachData,6,4);  //Ìí¼Ó¸½¼ÓÐÅÏ¢
+ 534   2          if(Search_IdOrErWeiMa_Info(StoreErWeiMaBuffer,0) == 0){//ÐÅÏ¢²»´æÔÚÔòÌí¼Ó
+ 535   3          Cursor = StoreErWeiMaBuffer[5] ;
+ 536   3      //    for(i=0;i<6;i++){
+ 537   3      //    SBUF = StoreErWeiMaBuffer[i];while(!(SCON&0x02));SCON &= ~0x02;_nop_();
+ 538   3      //      }
+ 539   3      
+ 540   3        ItemCounter = FLASH_W25Q64_ByteRead(ErWeiMa_AddrTable[Cursor&= 0x0f][0])*256+FLASH_W25Q64_ByteRead(ErWeiM
+             -a_AddrTable[Cursor&= 0x0f][0]+1);//¶ÁÈ¡¸ÃÇøÓò´¢´æµÄÐÅÏ¢×ÜÁ¿
+ 541   3      //   SBUF = 0xa5;while(!(SCON&0x02));SCON &= ~0x02;
+ 542   3      //¸ù¾ÝÐ£ÑéÂë16ÖÖ·ÖÀà´¢´æ²»Í¬µÄÇøÓò
+ 543   3        if(ItemCounter == 0xffff)//³õÊ¼»¯¹¤×÷
+ 544   3        ItemCounter = 0;
+ 545   3      
+ 546   3      //          for(i=0;i<10;i++){
+ 547   3      //    SBUF = StoreErWeiMaBuffer[i];while(!(SCON&0x02));SCON &= ~0x02;_nop_();
+ 548   3      //      }
+ 549   3                
+ 550   3        FLASH_W25Q64_Write (ErWeiMa_AddrTable[Cursor&= 0x0f][0]+ItemCounter*10+30, StoreErWeiMaBuffer, 10);//ÔÚÎ²
+             -²¿×·¼ÓÐÅÏ¢ Ã¿¸öÇøÓòÇ°30×Ö½ÚÔ¤Áô
+ 551   3        ItemCounter ++;//ÊýÁ¿Ôö¼Ó1
+ 552   3      //  SBUF = 0xa6;while(!(SCON&0x02));SCON &= ~0x02;
+ 553   3        ItemCounterBuffer[0] = (ItemCounter & 0xff00)>>8;
+ 554   3        ItemCounterBuffer[1] = ItemCounter & 0x00ff;
+ 555   3        FLASH_W25Q64_Update (ErWeiMa_AddrTable[Cursor&= 0x0f][0], ItemCounterBuffer, 2);//¸üÐÂÊýÁ¿ÐÅÏ¢
+ 556   3      //   SBUF = 0xa7;while(!(SCON&0x02));SCON &= ~0x02;
+ 557   3        //  FLASH_W25Q64_Write ( ErWeiMa_AddrTable[1][0]+5*10+30,erweima, 10);
+ 558   3      //  memset(CommonDataBuffer,0x00,600);
+ 559   3          FLASH_W25Q64_Read(CommonDataBuffer,ErWeiMa_AddrTable[Cursor&= 0x0f][0],600);//¶ÁÈë»º³åÇø
+ 560   3      //       SBUF = 0xa2;while(!(SCON&0x02));SCON &= ~0x02;
+ 561   3      //    for(i=0;i<600;i++){
+ 562   3      //     SBUF = CommonDataBuffer[i];while(!(SCON&0x02));SCON &= ~0x02;_nop_();_nop_();
+ 563   3      //    }
+ 564   3        }else{
+ 565   3          return 1;
+ 566   3        }
+ 567   2        return 1;
+ 568   2      }
+ 569   1      
+ 570   1      return 1;
+ 571   1      }
+ 572          //ËÑË÷Éí·ÝÖ¤ÐÅÏ¢ ·µ»ØËùÔÚµØÖ·»òÕß0£¨Ã»ÓÐËÑË÷µ½ÐÅÏ¢£©
+ 573          unsigned long int Search_IdOrErWeiMa_Info(UCHAR *Data,bit SecletFlag){
+ 574   1      
+ 575   1      UCHAR TempIdData[9],*Result_Addr,Cursor = 0;
+ 576   1      UCHAR TempErWeiMaBuffer[6]={0};
+ 577   1      ULONG CurrentAddr = 0;
+ 578   1      UINT i=0,ItemCounter=0,Comparei = 0;
+ 579   1        if( SecletFlag){
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 11  
+
+ 580   2          for(i=0;i<9;i++){
+ 581   3          TempIdData[i] = *Data++;
+ 582   3          }
+ 583   2          Cursor = TempIdData[8];
+ 584   2      //      for(i=0;i<9;i++){
+ 585   2      //    SBUF = TempIdData[i];while(!(SCON&0x02));SCON &= ~0x02;_nop_();
+ 586   2      //      }
+ 587   2          ItemCounter = FLASH_W25Q64_ByteRead(Id_StoreAddrTable[Cursor &= 0x0f][0])*256+FLASH_W25Q64_ByteRead(Id_S
+             -toreAddrTable[Cursor &= 0x0f][0]+1);//¶ÁÈ¡¸ÃÇøÓò´¢´æµÄÐÅÏ¢×ÜÁ¿
+ 588   2            if(ItemCounter == 0xffff)
+ 589   2              ItemCounter = 0;
+ 590   2          for(CurrentAddr = Id_StoreAddrTable[Cursor&= 0x0f][0];CurrentAddr<Id_StoreAddrTable[Cursor&= 0x0f][0]+It
+             -emCounter*20+60;CurrentAddr+=600){
+ 591   3               FLASH_W25Q64_Read(CommonDataBuffer,CurrentAddr,600);//¶ÁÈë»º³åÇø
+ 592   3      //         SBUF = 0xa2;while(!(SCON&0x02));SCON &= ~0x02;
+ 593   3               Result_Addr = CommonDataBuffer;
+ 594   3                for(i=0;i<600;i+=20){
+ 595   4                  if(strncmp(Result_Addr,TempIdData,9) != 0){
+ 596   5                  Result_Addr+=20;
+ 597   5                  Comparei++;
+ 598   5                  }
+ 599   4                else
+ 600   4                {
+ 601   5                  memset(CommonDataBuffer,0x00,600);
+ 602   5                  return Id_StoreAddrTable[Cursor&= 0x0f][0]+Comparei*20;
+ 603   5                }
+ 604   4              }
+ 605   3            }
+ 606   2        }else if(!SecletFlag){
+ 607   2        for(i=0;i<6;i++){
+ 608   3          TempErWeiMaBuffer[i] = *Data++;
+ 609   3        }
+ 610   2      //    for(i=0;i<6;i++){
+ 611   2      //    SBUF = TempErWeiMaBuffer[i];while(!(SCON&0x02));SCON &= ~0x02;_nop_();
+ 612   2      //      }
+ 613   2          Cursor = TempErWeiMaBuffer[5];
+ 614   2          ItemCounter = FLASH_W25Q64_ByteRead(ErWeiMa_AddrTable[Cursor &= 0x0f][0])*256+FLASH_W25Q64_ByteRead(ErWe
+             -iMa_AddrTable[Cursor &= 0x0f][0]+1);//¶ÁÈ¡¸ÃÇøÓò´¢´æµÄÐÅÏ¢×ÜÁ¿
+ 615   2            if(ItemCounter == 0xffff)
+ 616   2              ItemCounter = 0;
+ 617   2            for(CurrentAddr = ErWeiMa_AddrTable[Cursor&= 0x0f][0];CurrentAddr<ErWeiMa_AddrTable[Cursor&= 0x0f][0]+I
+             -temCounter*10+30;CurrentAddr+=600){
+ 618   3               FLASH_W25Q64_Read(CommonDataBuffer,CurrentAddr,600);//¶ÁÈë»º³åÇø
+ 619   3      //         SBUF = 0xa2;while(!(SCON&0x02));SCON &= ~0x02;
+ 620   3               Result_Addr = CommonDataBuffer;
+ 621   3                for(i=0;i<600;i+=10){
+ 622   4                  if(strncmp(Result_Addr,TempErWeiMaBuffer,6) != 0){
+ 623   5                  Result_Addr+=10;
+ 624   5                  Comparei++;//¼ÍÂ¼´ÎÊý
+ 625   5                  }
+ 626   4                else
+ 627   4                {
+ 628   5                  memset(CommonDataBuffer,0x00,600);
+ 629   5                  return ErWeiMa_AddrTable[Cursor&= 0x0f][0]+Comparei*10;
+ 630   5                }
+ 631   4              }
+ 632   3            }
+ 633   2          }
+ 634   1      memset(CommonDataBuffer,0x00,600);
+ 635   1      return 0;
+ 636   1      }
+ 637          
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 12  
+
+ 638          
+ 639          
+ 640          //É¾³ýÉí·ÝÖ¤ÐÅÏ¢  ·µ»Ø0£¨É¾³ýÊ§°Ü£©»òÕß1£¨É¾³ý³É¹¦£©
+ 641          UCHAR Delete_IdOrErWeiMa_Info(UCHAR *IdData,bit SecletFlag){
+ 642   1        UINT  ItemCounter=0;//¸ÃÇøÓòµÄÓÃ»§ÐÅÏ¢ÊýÁ¿
+ 643   1        UCHAR ItemCounterBuffer[2] = {0},Cursor = 0;
+ 644   1        UCHAR DelErWeiMaBuffer[6]={0};
+ 645   1        ULONG TempAddr = 0;
+ 646   1        UCHAR TempIdData[9] ={0};
+ 647   1        UCHAR TempFlashBuffer[20]= {0};
+ 648   1        UINT i;
+ 649   1          if(SecletFlag){
+ 650   2          for(i=0;i<9;i++)
+ 651   2          TempIdData[i] = *IdData++;
+ 652   2            Cursor = TempIdData[8];
+ 653   2          ItemCounter = FLASH_W25Q64_ByteRead(Id_StoreAddrTable[Cursor&= 0x0f][0])*256+FLASH_W25Q64_ByteRead(Id_St
+             -oreAddrTable[Cursor&= 0x0f][0]+1);//¶ÁÈ¡¸ÃÇøÓò´¢´æµÄÐÅÏ¢×ÜÁ¿
+ 654   2          TempAddr = Search_IdOrErWeiMa_Info(TempIdData,1);
+ 655   2          if(TempAddr == 0){
+ 656   3          return 1;
+ 657   3          }else{
+ 658   3            FLASH_W25Q64_Read(TempFlashBuffer,Id_StoreAddrTable[Cursor&= 0x0f][0]+ItemCounter*20+60,20);
+ 659   3            FLASH_W25Q64_Update (TempAddr, TempFlashBuffer, 20);//½«Î²²¿µÄÒ»ÌõÐÅÏ¢×·¼Óµ½É¾³ýµÄÎ»ÖÃ
+ 660   3            memset(TempFlashBuffer,0xff,20);
+ 661   3            FLASH_W25Q64_Update (Id_StoreAddrTable[Cursor &= 0x0f][0]+ItemCounter*20+60,TempFlashBuffer , 20);//É¾³
+             -ýÄ©Î²µÄÒ»ÌõÐÅÏ¢
+ 662   3            ItemCounter--;//ÊýÁ¿¼õ1
+ 663   3            ItemCounterBuffer[0] = (ItemCounter & 0xff00)>>8;
+ 664   3            ItemCounterBuffer[1] = ItemCounter & 0x00ff;
+ 665   3            FLASH_W25Q64_Update (Id_StoreAddrTable[Cursor&= 0x0f][0], ItemCounterBuffer, 2);//¸üÐÂÊýÁ¿ÐÅÏ¢
+ 666   3            return 1;
+ 667   3          }
+ 668   2        }else if(!SecletFlag){
+ 669   2          for(i=0;i<6;i++)
+ 670   2          DelErWeiMaBuffer[i] = *IdData++;
+ 671   2          Cursor  = DelErWeiMaBuffer[5];
+ 672   2          ItemCounter = FLASH_W25Q64_ByteRead(ErWeiMa_AddrTable[Cursor&= 0x0f][0])*256+FLASH_W25Q64_ByteRead(ErWei
+             -Ma_AddrTable[Cursor&= 0x0f][0]+1);//¶ÁÈ¡¸ÃÇøÓò´¢´æµÄÐÅÏ¢×ÜÁ¿
+ 673   2          TempAddr = Search_IdOrErWeiMa_Info(DelErWeiMaBuffer,0);
+ 674   2          if(TempAddr == 0){
+ 675   3          return 1;
+ 676   3          }else{
+ 677   3            FLASH_W25Q64_Read(TempFlashBuffer,ErWeiMa_AddrTable[Cursor&= 0x0f][0]+ItemCounter*10+30,10);
+ 678   3            FLASH_W25Q64_Update (TempAddr, TempFlashBuffer, 10);//½«Î²²¿µÄÒ»ÌõÐÅÏ¢×·¼Óµ½É¾³ýµÄÎ»ÖÃ
+ 679   3            memset(TempFlashBuffer,0xff,10);
+ 680   3            FLASH_W25Q64_Update ((ErWeiMa_AddrTable[Cursor&= 0x0f][0]+ItemCounter*10+30),TempFlashBuffer , 10);//É¾
+             -³ýÄ©Î²µÄÒ»ÌõÐÅÏ¢
+ 681   3            ItemCounter--;//ÊýÁ¿¼õ1
+ 682   3            ItemCounterBuffer[0] = (ItemCounter & 0xff00)>>8;
+ 683   3            ItemCounterBuffer[1] = ItemCounter & 0x00ff;
+ 684   3            FLASH_W25Q64_Update (ErWeiMa_AddrTable[Cursor&= 0x0f][0], ItemCounterBuffer, 2);//¸üÐÂÊýÁ¿ÐÅÏ¢
+ 685   3            return 1;
+ 686   3          }
+ 687   2        }
+ 688   1        return 0;
+ 689   1      }
+ 690          
+ 691          
+ 692          
+ 693          void WifiSeiralConfigMode(void)
+ 694          {
+ 695   1        ENTM = 0;//´ò¿ªÍ¸´«Ä£Ê½´®¿Ú½ÓÊÕ
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 13  
+
+ 696   1        USART1_Send(&WifiInterSerialConfigModeCMD ,1 );
+ 697   1        Delay_ms(250);
+ 698   1        USART1_Send(&WifiInterSerialConfigModeCMD+1 ,1 );
+ 699   1        Delay_ms(250);
+ 700   1        USART1_Send(&WifiInterSerialConfigModeCMD+2 ,1 );
+ 701   1        
+ 702   1        Delay_ms(2000);
+ 703   1        USART1_Send(&WifiInterSerialConfigModeCMD+3 ,1 );
+ 704   1        Delay_ms(2000);
+ 705   1        USART1_Send(WifiInterTmModeCMD,sizeof(WifiInterTmModeCMD));//½øÈëÍ¸´«Ä£Ê½
+ 706   1        ENTM = 1;//¹Ø±ÕÍ¸´«Ä£Ê½´®¿Ú½ÓÊÕ
+ 707   1      }
+ 708          
+ 709          
+ 710          
+ 711          ///****************************************************/
+ 712          ///* ´®¿Ú1ÖÐ¶Ï´¦Àíº¯Êý                      */
+ 713          ///* ³ÌÐò¹¦ÄÜ£º´®¿Ú1ÖÐ¶Ï´¦Àíº¯Êý                    */
+ 714          ///* Èë¿Ú²ÎÊý:ÎÞ                    */
+ 715          ///* ³ö¿Ú²ÎÊý:ÎÞ                    */
+ 716          ///****************************************************/
+ 717          //void Uart1_intrupt_function(void)
+ 718          //{
+ 719          
+ 720          //}
+ 721          
+ 722          
+ 723          
+ 724          ///****************************************************/
+ 725          ///* ´®¿Ú2ÖÐ¶Ï´¦Àíº¯Êý                      */
+ 726          ///* ³ÌÐò¹¦ÄÜ£º´®¿Ú2ÖÐ¶Ï´¦Àíº¯Êý                    */
+ 727          ///* Èë¿Ú²ÎÊý:ÎÞ                    */
+ 728          ///* ³ö¿Ú²ÎÊý:ÎÞ                    */
+ 729          ///****************************************************/
+ 730          //void Uart2_intrupt_function(void)
+ 731          //{            
+ 732          
+ 733          //}
+ 734          
+ 735          
+ 736          
+ 737          ///****************************************************/
+ 738          ///* ´®¿Ú3ÖÐ¶Ï´¦Àíº¯Êý                      */
+ 739          ///* ³ÌÐò¹¦ÄÜ£º´®¿Ú3ÖÐ¶Ï´¦Àíº¯Êý                    */
+ 740          ///* Èë¿Ú²ÎÊý:ÎÞ                    */
+ 741          ///* ³ö¿Ú²ÎÊý:ÎÞ                    */
+ 742          ///****************************************************/
+ 743          //void Uart3_intrupt_function(void)
+ 744          //{
+ 745          //}
+ 746          
+ 747          
+ 748          
+ 749          
+ 750          
+ 751          ///****************************************************/
+ 752          ///* ´®¿Ú4ÖÐ¶Ï´¦Àíº¯Êý                      */
+ 753          ///* ³ÌÐò¹¦ÄÜ£º´®¿Ú4ÖÐ¶Ï´¦Àíº¯Êý                    */
+ 754          ///* Èë¿Ú²ÎÊý:ÎÞ                    */
+ 755          ///* ³ö¿Ú²ÎÊý:ÎÞ                    */
+ 756          ///****************************************************/
+ 757          //void Uart4_intrupt_function(void)
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 14  
+
+ 758          //{
+ 759          //}
+ 760          
+ 761          /*****************************************************************************/
+ 762          /*´®¿ÚÊý¾Ý·¢ËÍ³ÌÐò                               */
+ 763          /*Èë¿Ú²ÎÊý£ºdata ´ý·¢ËÍµÄÊý¾Ý»º´æ                                            */
+ 764          /*          len ´ý·¢ËÍÊý¾ÝµÄ¸öÊý                                             */
+ 765          /*          UATR_Num   Ê¹ÓÃµÄ´®¿ÚºÅ                                          */
+ 766          /*   ·µ»ØÖµ£º ÎÞ                                                             */
+ 767          /*****************************************************************************/
+ 768          void USART1_Send(unsigned char *dat,unsigned int len)
+ 769          {  unsigned int i;
+ 770   1      
+ 771   1      for(i=0;i<len;i++)  
+ 772   1      { 
+ 773   2        {SBUF=*dat++;while(!(SCON&0x02));SCON &=~0x02;_nop_();_nop_();}
+ 774   2      }
+ 775   1      
+ 776   1      }
+ 777          /*****************************************************************************/
+ 778          /*´®¿ÚÊý¾Ý·¢ËÍ³ÌÐò                               */
+ 779          /*Èë¿Ú²ÎÊý£ºdata ´ý·¢ËÍµÄÊý¾Ý»º´æ                                            */
+ 780          /*          len ´ý·¢ËÍÊý¾ÝµÄ¸öÊý                                             */
+ 781          /*          UATR_Num   Ê¹ÓÃµÄ´®¿ÚºÅ                                          */
+ 782          /*   ·µ»ØÖµ£º ÎÞ                                                             */
+ 783          /*****************************************************************************/
+ 784          void USART4_Send(unsigned char *dat,unsigned int len)
+ 785          {  unsigned int i;
+ 786   1      
+ 787   1      for(i=0;i<len;i++)  
+ 788   1      { 
+ 789   2        {S4BUF=*dat++;while(!(S4CON&0x02));S4CON &=~0x02;_nop_();_nop_();}
+ 790   2      }
+ 791   1      
+ 792   1      }
+ 793          
+ 794          /*******************************************************
+ 795          º¯ÊýÃû³Æ£ºMuti_Send_Byte
+ 796          º¯Êý¹¦ÄÜ£º½ÓÊÕ1¸ö×Ö½ÚµÄÊý¾Ý£©
+ 797          Èë¿Úº¯Êý£º
+ 798          ³ö¿Úº¯Êý£ºÊÕµ½µÄ×Ö·û
+ 799          ********************************************************/
+ 800          char Muti_Read_Byte(void)
+ 801          {  
+ 802   1      unsigned char dat;
+ 803   1      dat = P2;
+ 804   1      P1M1 &= ~(1<<2);                  //CHACK³õÊ¼»¯ÎªÊä³ö 
+ 805   1      P1M0 |= (1<<2);
+ 806   1      CHACK = 1;
+ 807   1      _nop_();
+ 808   1      CHACK = 0;
+ 809   1      return dat;
+ 810   1      } 
+ 811          
+ 812          
+ 813          /*******************************************************
+ 814          º¯ÊýÃû³Æ£ºMuti_Send_Byte
+ 815          º¯Êý¹¦ÄÜ£º±¾»úÖ÷¶¯¿ªÊ¼Ò»´Î»á»°£¨·¢ËÍÊý¾Ý£©
+ 816          Èë¿Úº¯Êý£ºÒª×ªËÍµÄÊý¾ÝData  Êý¾Ý³¤¶Èlen
+ 817          ³ö¿Úº¯Êý£ºÎÞ
+ 818          ********************************************************/
+ 819          void Muti_Send_Byte(unsigned char *Data,unsigned int len)
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 15  
+
+ 820          { 
+ 821   1      unsigned int i=0;
+ 822   1        
+ 823   1      //    for(i=0;i<len;i++){
+ 824   1      //          SBUF = *Data++;while(!(SCON&0x02));SCON &=~0x02;_nop_();
+ 825   1      //        }
+ 826   1      if(!CHKREQ)
+ 827   1      {
+ 828   2      REQ = 1;                                //ÖÃREQÎªÓÐÐ§
+ 829   2      if(!CHKREQ)
+ 830   2      {
+ 831   3        P2M1 = 0x00;                        //P2ÎªÊä³ö
+ 832   3        P2M0 = 0xff;
+ 833   3        P1M1 |= (1<<2);
+ 834   3        P1M0 &= ~(1<<2);                              //CHACK³õÊ¼»¯ÎªÊäÈë
+ 835   3        while(i<len)
+ 836   3          {
+ 837   4            //SBUF=i;while(!(SCON&0x02));SCON &=~0x02;_nop_();_nop_();
+ 838   4            P2 = *(Data++);                           //½«Êý¾ÝËÍµ½P2¶Ë¿Ú
+ 839   4            //SBUF=P2;while(!(SCON&0x02));SCON &=~0x02;_nop_();_nop_();
+ 840   4            Delay_us(10);
+ 841   4            STB = ~STB;
+ 842   4            while(CHACK);
+ 843   4            i++;
+ 844   4          } 
+ 845   3      REQ = 0;    
+ 846   3      }else REQ = 0;
+ 847   2      }
+ 848   1      REQ = 0;
+ 849   1      P2M1 = 0xff;
+ 850   1      P2M0 = 0x00;    //³õÊ¼»¯P2ÎªÊäÈë
+ 851   1      }
+ 852          /********************************************************
+ 853          º¯ÊýÃû³Æ:Arraycat
+ 854          º¯Êý¹¦ÄÜ:¶ÔÊý×é½øÐÐÆ´½Ó
+ 855          Èë¿Úº¯Êý: Data_Src    ÒªÌí¼ÓµÄÊý×é  Data_Dest Ô­Êý×é
+ 856          SrcDataNum ÒªÌí¼ÓµÄÊýÁ¿ DestDataNum   Ô­Êý×éµÄÊýÁ¿
+ 857          ³ö¿Úº¯Êý:ÎÞ
+ 858          ±¸×¢:ÎÞ
+ 859          ********************************************************/
+ 860          void Arraycat(unsigned char *Data_Dest,unsigned char *Data_Src,unsigned int DestDataNum,unsigned int SrcDa
+             -taNum)
+ 861           {unsigned int i;
+ 862   1        for(i=0;i<SrcDataNum;i++)
+ 863   1         {*(Data_Dest+DestDataNum+i)=*(Data_Src+i);} 
+ 864   1        }
+ 865          /*****************************************************************************
+ 866          ´®¿ÚÊý¾ÝÖ¡×éÖ¯³ÌÐò 
+ 867          º¯ÊýÃû³Æ:Fe_data_Organize
+ 868          Èë¿Ú²ÎÊý£º  CMD µ±Ç°²Ù×÷µÄÃüÁî                                                      
+ 869                    Data µ±Ç°µÄ²Ù×÷Êý¾Ý                                       
+ 870                    DataNum   µ±Ç°µÄ²Ù×÷Êý¾ÝµÄ¸öÊý
+ 871                    OrgType ×éÖ¯µÄÀàÐÍ 1ÎªÍ·ÊÇ55 AA 0ÎªÍ·ÊÇAA 55
+ 872          ·µ»ØÖµ£º ÕûÐÍ£¬Îªµ±Ç°UART1_RE_DATAÊý×éÓÐÐ§Êý¾ÝµÄ¸öÊý                  
+ 873          ±¸×¢:³ÌÐò×éÖ¯³ÉÍ¨ÓÃ³ÌÐò£¬Ö»ÓÃ´«µÝÏà¹ØµÄ²ÎÊý£¬×Ô¼ººÏ³É·µ»ØÖ¡£¬¶¨Òå½á¹¹Ìå±äÁ¿¡£ 
+ 874            Ö¡½á¹¹Îª Ö¡Í· Êý¾Ý³¤¶È Ä¿±êµØÖ· ÐòÁÐºÅ ÃüÁî Êý¾Ý Ð£ÑéºÍ Ö¡Î²            
+ 875          *****************************************************************************/
+ 876          unsigned int Fe_data_Organize(unsigned char CMD[],unsigned char Data[],unsigned int DataNum,bit OrgType)
+ 877           { 
+ 878   1        unsigned char Organize_DataBuffer[2]={0};
+ 879   1        unsigned int i=0;
+ 880   1        unsigned int StartPointer0=0,StartPointer1=0; 
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 16  
+
+ 881   1        /************************************************************************/
+ 882   1        /*×éÖ¯Ö¡*/
+ 883   1        /*×éÖ¯Ö¡Í·*/
+ 884   1          if(OrgType){
+ 885   2        StartPointer1=2;
+ 886   2        Arraycat(&CommonDataBuffer[0],&FE_START[0],StartPointer0,StartPointer1);/*×éÖ¯Ö¡Í·*/
+ 887   2        }else if(!OrgType){
+ 888   2        StartPointer1=2;
+ 889   2        Arraycat(&CommonDataBuffer[0],&FE_START_ACK[0],StartPointer0,StartPointer1);/*×éÖ¯Ö¡Í·*/
+ 890   2        }
+ 891   1        StartPointer0=StartPointer0+StartPointer1;
+ 892   1        Organize_DataBuffer[0]=(DataNum&0xff00)>>8;/*×·¼ÓÊý¾Ý³¤¶È*/
+ 893   1        Organize_DataBuffer[1]=DataNum&0xff;
+ 894   1        StartPointer1=2;
+ 895   1        Arraycat(&CommonDataBuffer[0],&Organize_DataBuffer[0],StartPointer0,StartPointer1);
+ 896   1        StartPointer0=StartPointer0+StartPointer1;
+ 897   1        StartPointer1=6;
+ 898   1        Arraycat(&CommonDataBuffer[0],&System_ID[0],StartPointer0,StartPointer1);/*×·¼ÓÖ÷»úID*/
+ 899   1        StartPointer0=StartPointer0+StartPointer1;
+ 900   1        CommonDataBuffer[StartPointer0]=UART_Fe_Seq;
+ 901   1        StartPointer0++;
+ 902   1        StartPointer1=2;
+ 903   1        Arraycat(&CommonDataBuffer[0],&CMD[0],StartPointer0,StartPointer1);/*×·¼ÓÃüÁîºÅ*/
+ 904   1        StartPointer0=StartPointer0+StartPointer1;
+ 905   1        if(DataNum>0) 
+ 906   1         {StartPointer1=DataNum;
+ 907   2          Arraycat(&CommonDataBuffer[0],&Data[0],StartPointer0,StartPointer1);/*×·¼ÓÊý¾Ý*/
+ 908   2          StartPointer0=StartPointer0+StartPointer1; }
+ 909   1         Organize_DataBuffer[0]=0;
+ 910   1        for(i=0;i<StartPointer0;i++)/*¼ÆËãÐ£ÑéºÍ*/
+ 911   1          Organize_DataBuffer[0]=Organize_DataBuffer[0]+CommonDataBuffer[i];
+ 912   1          Organize_DataBuffer[1]=0x16;
+ 913   1          Arraycat(&CommonDataBuffer[0],&Organize_DataBuffer[0],StartPointer0,2);/*×·¼ÓÐ£ÑéºÍºÍÖ¡Î²*/
+ 914   1          StartPointer0=StartPointer0+2;
+ 915   1          return(StartPointer0);
+ 916   1      }
+ 917           
+ 918            
+ 919          
+ 920          void Delay_ms(UINT ms){
+ 921   1      UINT k;
+ 922   1      unsigned char i, j;
+ 923   1      for(k=0;k<ms;k++){
+ 924   2        _nop_();
+ 925   2        _nop_();
+ 926   2        i = 22;
+ 927   2        j = 128;
+ 928   2        do
+ 929   2        {
+ 930   3          while (--j);
+ 931   3        } while (--i);
+ 932   2      }
+ 933   1      }
+ 934          
+ 935          void Delay_us(UINT ms){
+ 936   1      UINT k;
+ 937   1      unsigned char i;
+ 938   1      for(k=0;k<ms;k++){
+ 939   2        i = 3;
+ 940   2        while (--i);
+ 941   2      }
+ 942   1      }
+C51 COMPILER V9.54   UTILSFUNCTION                                                         06/14/2016 11:04:00 PAGE 17  
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   6815    ----
+   CONSTANT SIZE    =    359    ----
+   XDATA SIZE       =   1821     202
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      6       4
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

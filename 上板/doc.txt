@@ -1,0 +1,3 @@
+#define BuzzerTimeNormal	0x01						//触发一次蜂鸣器响的时间（正常100ms）
+#define BuzzerTimeLong 0x02								//触发一次蜂鸣器响的时间（拉长3000ms）
+#define BuzzerTimeShort 0x03							//急促蜂鸣器（20ms）

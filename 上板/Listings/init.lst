@@ -1,0 +1,172 @@
+C51 COMPILER V9.54   INIT                                                                  06/16/2016 19:33:40 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE INIT
+OBJECT MODULE PLACED IN .\Objects\init.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE init.c LARGE OPTIMIZE(8,SPEED) BROWSE INTVECTOR(0X2000) DEBUG OBJECTEXTE
+                    -ND PRINT(.\Listings\init.lst) TABS(2) OBJECT(.\Objects\init.obj)
+
+line level    source
+
+   1          #include"init.h"
+   2          #include "flashfunction.h"
+   3          
+   4          extern unsigned char System_ID[6];
+   5          extern unsigned int DoorOpenTime;
+   6          /****************************************************/
+   7          /* 外部中断的初始化                         */
+   8          /* 程序功能：外部中断初始化，                       */
+   9          /* 入口参数:无                    */
+  10          /* 出口参数:无                    */
+  11          /****************************************************/
+  12          void INT_Init(void)
+  13          {
+  14   1      INT0=1;
+  15   1      IT0 = 0;                    //设置INT0的中断类型 (1:仅下降沿 0:上升沿和下降沿)
+  16   1      EX0 = 1;                    //使能INT0中断
+  17   1      }
+  18          
+  19          
+  20          /***************************************************/
+  21          /*函数名称：IO_Init                                */
+  22          /*功    能：单片机IO端口模式初始化                 */
+  23          /*入口参数：无                                     */
+  24          /*返 回 值：无                                     */ 
+  25          /*备    注：STC15W4K32S4系列A版单片机部分端口复位后*/
+  26          /*          不是准双向口,需要设置才能正常使用      */
+  27          /***************************************************/
+  28          void IO_Init(void)
+  29          {
+  30   1      //将P04 P05 P06 P07设置为开漏口
+  31   1      //因为单片机为5V端口，W25Q64为3.3V端口，为了实现电平匹配
+  32   1      //将单片机设置为开漏结构，由外部上拉到3.3V。
+  33   1      //  P4M1 |= BIT0; /*P4.0初始化为输入*/
+  34   1      //  P4M0 &= ~(BIT0);
+  35   1      //P4M0 |= (1<<0);
+  36   1      //P4M1 &= ~(1<<0);                                      //P40初始化为输出
+  37   1      P4M0 &= ~(1<<3);
+  38   1      P4M1 &= ~(1<<3);
+  39   1      P4M0 &= ~(1<<4);
+  40   1      P4M1 &= ~(1<<4);                                      //继电器端口初始化
+  41   1      P0M1 |= (1<<4) | (1<<5) | (1<<6) | (1<<7) ;           //FLASH端口初始化
+  42   1      P0M0 |= (1<<4) | (1<<5) | (1<<6) | (1<<7) ;
+  43   1      P2M1 = 0xff;
+  44   1      P2M0 = 0x00;                      //初始化P2为输入
+  45   1      P3M1 &= ~(1<<7);                  //STB  P32初始化为输出  二维码模块复位引脚
+  46   1      P3M0 |= (1<<7);
+  47   1      P3M1 &= ~(1<<3);                  //STB  P33初始化为输出
+  48   1      P3M0 |= (1<<3);
+  49   1      P1M1 &= ~(1<<4);                  //REQ  P14初始化为输出
+  50   1      P1M0 |= (1<<4); 
+  51   1      P1M1 &= ~(1<<5);                  //BUSYSTE  P15初始化为输出
+  52   1      P1M0 |= (1<<5);
+  53   1      P1M1 |= (1<<2);
+  54   1      P1M0 &= ~(1<<2);                  //CHACK初始化为输入
+C51 COMPILER V9.54   INIT                                                                  06/16/2016 19:33:40 PAGE 2   
+
+  55   1      P1M1 |= (1<<3);
+  56   1      P1M0 &= ~(1<<3);                  //CHKREQ初始化为输入
+  57   1      //语音初始化
+  58   1        P4M1 |=  (1<<2);       //输入
+  59   1        P4M0 &= ~(1<<2);
+  60   1      
+  61   1        P4M1 &= ~(1<<5);       //输出
+  62   1        P4M0 &= ~(1<<5);
+  63   1      
+  64   1      REQ = 0;                          //REQ默认没有请求数据
+  65   1      BUSYSTE = 0;                      //BUSYSTE默认不忙
+  66   1      Door1_Ctl_0=1;Door1_Ctl_1=1;
+  67   1      }
+  68          
+  69          
+  70          
+  71          /****************************************************/
+  72          /* 定时器0的初始化                          */
+  73          /* 程序功能：初始化定时器0，每隔10ms产生一次中断    */
+  74          /* 入口参数:无                    */
+  75          /* 出口参数:无                    */
+  76          /****************************************************/
+  77          void Timer0Init(void)   //10毫秒@22.1184MHz
+  78          {
+  79   1        AUXR &= 0x7F;   //定时器时钟12T模式
+  80   1        TMOD &= 0xF0;   //设置定时器模式
+  81   1        TL0 = 0x00;   //设置定时初值
+  82   1        TH0 = 0xB8;   //设置定时初值
+  83   1        TF0 = 0;    //清除TF0标志
+  84   1        TR0 = 1;    //定时器0开始计时
+  85   1        ET0=1; /*打开定时器中断*/
+  86   1      }
+  87          
+  88          /*****************************************/
+  89          /* 串口1、4初始化                          */
+  90          /* 程序功能：串口1、4初始化                */
+  91          /* 入口参数:无                           */
+  92          /* 出口参数:无                           */
+  93          /*****************************************/
+  94          void init_Uart(void)
+  95          {
+  96   1      P_SW2 &= ~0x04;            //S4_S0=0 (P0.2/RxD4, P0.3/TxD4)  
+  97   1      P_SW2 &= ~0x02;            //S3_S0=0 (P0.0/RxD3, P0.1/TxD3)
+  98   1      P_SW2 |=0x01;             /*设置串口2工作在P4.6和P4.7*/
+  99   1      ACC = P_SW1;
+ 100   1      ACC &= ~(S1_S0 | S1_S1);    //S1_S0=0 S1_S1=0
+ 101   1      P_SW1 = ACC;                //(P3.0/RxD, P3.1/TxD)
+ 102   1      SCON = 0x50;                //1010000
+ 103   1      S2CON = 0x50;               //8位可变波特率
+ 104   1      S3CON = 0x50;
+ 105   1      S4CON = 0x10;               //00001010
+ 106   1      T2L = (65536 - (FOSC/4/BAUD));   //设置波特率重装值
+ 107   1      T2H = (65536 - (FOSC/4/BAUD))>>8;
+ 108   1        
+ 109   1          T3L = (65536 - (S3FOSC/4/S3BAUD));   //设置串口3波特率重装值
+ 110   1          T3H = (65536 - (S3FOSC/4/S3BAUD))>>8;
+ 111   1          T4T3M |= 0x02;              //定时器3为1T模式
+ 112   1          T4T3M |= 0x08;              //定时器3开始计时
+ 113   1      
+ 114   1      AUXR = 0x14;                //T2为1T模式, 并启动定时器2 10100
+ 115   1      AUXR |= 0x01;               //选择定时器2为串口1的波特率发生器
+ 116   1      ES = 1;                     //使能串口1中断
+C51 COMPILER V9.54   INIT                                                                  06/16/2016 19:33:40 PAGE 3   
+
+ 117   1      IE2 = 0x19;                 //使能串口3,4中断
+ 118   1      }
+ 119          
+ 120          void System_SetParaInit(void){
+ 121   1        unsigned char i,TempBuffer[6];
+ 122   1        //读取系统编号
+ 123   1          FLASH_W25Q64_Read(TempBuffer,System_SetParaAddr, sizeof(System_ID));//读入缓冲区
+ 124   1          SBUF = 0x91;while(!(SCON&0x02));SCON &= ~0x02;
+ 125   1          for(i=0;i<6;i++){
+ 126   2         SBUF = TempBuffer[i];while(!(SCON&0x02));SCON &= ~0x02;
+ 127   2        }
+ 128   1          if(TempBuffer[0] == 0xff){
+ 129   2          ;
+ 130   2          }else{
+ 131   2          for(i=0;i<sizeof(System_ID);i++){
+ 132   3          System_ID[i] = TempBuffer[i];
+ 133   3          }
+ 134   2          }
+ 135   1          memset(TempBuffer,0x00,6);
+ 136   1          //读取开门时间设置
+ 137   1        FLASH_W25Q64_Read(TempBuffer,System_SetParaAddr+10, 2);//读入缓冲区
+ 138   1            if(TempBuffer[0] == 0xff){
+ 139   2          ;
+ 140   2          }else{
+ 141   2          DoorOpenTime=TempBuffer[0]*256+TempBuffer[1];
+ 142   2          }
+ 143   1      }
+ 144          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    337    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       6
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,673 @@
+C51 COMPILER V9.54   FLASHFUNCTION                                                         06/14/2016 11:04:00 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE FLASHFUNCTION
+OBJECT MODULE PLACED IN .\Objects\FlashFunction.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE FlashFunction.c LARGE OPTIMIZE(8,SPEED) BROWSE INTVECTOR(0X2000) DEBUG O
+                    -BJECTEXTEND PRINT(.\Listings\FlashFunction.lst) TABS(2) OBJECT(.\Objects\FlashFunction.obj)
+
+line level    source
+
+   1          
+   2          
+   3          #include "flashfunction.h"
+   4          
+   5          
+   6           
+   7          void FLASH_ByteWrite (FLADDR addr, char byte)
+   8          {
+   9   1          IAP_CONTR = ENABLE_ISP;         //打开 IAP 功能, 设置Flash 操作等待时间
+  10   1          IAP_CMD = 0x02;                 //IAP/ISP/EEPROM 字节编程命令
+  11   1          IAP_ADDRH = (addr&0xff00)>>8;    //设置目标单元地址的高8 位地址
+  12   1          IAP_ADDRL = (addr&0xff);    //设置目标单元地址的低8 位地址
+  13   1      
+  14   1          IAP_DATA = byte;                  //要编程的数据先送进IAP_DATA 寄存器
+  15   1          EA=0;
+  16   1          IAP_TRIG = 0x5A;   //先送 5Ah,再送A5h 到ISP/IAP 触发寄存器,每次都需如此
+  17   1          IAP_TRIG = 0xA5;   //送完A5h 后，ISP/IAP 命令立即被触发起动
+  18   1            _nop_();
+  19   1          EA=1; 
+  20   1          IAP_Disable();  //关闭IAP 功能, 清相关的特殊功能寄存器,使CPU 处于安全状态,
+  21   1                          //一次连续的IAP 操作完成之后建议关闭IAP 功能,不需要每次都关
+  22   1      }
+  23          /****************************************************************************/
+  24          /* FLASH_ByteRead                                                           */ 
+  25          /*This routine reads a <byte> from the linear FLASH address <addr>.         */ 
+  26          /*                                                                          */ 
+  27          /****************************************************************************/
+  28          unsigned char FLASH_ByteRead (FLADDR addr)
+  29          {
+  30   1          IAP_DATA = 0x00;
+  31   1          IAP_CONTR = ENABLE_ISP;         //打开IAP 功能, 设置Flash 操作等待时间
+  32   1          IAP_CMD = 0x01;                 //IAP/ISP/EEPROM 字节读命令
+  33   1      
+  34   1          IAP_ADDRH = (addr&0xff00)>>8;    //设置目标单元地址的高8 位地址
+  35   1          IAP_ADDRL = (addr&0xff);    //设置目标单元地址的低8 位地址
+  36   1      
+  37   1          EA=0;
+  38   1          IAP_TRIG = 0x5A;   //先送 5Ah,再送A5h 到ISP/IAP 触发寄存器,每次都需如此
+  39   1          IAP_TRIG = 0xA5;   //送完A5h 后，ISP/IAP 命令立即被触发起动
+  40   1          _nop_(); 
+  41   1          EA=1;
+  42   1          IAP_Disable();  //关闭IAP 功能, 清相关的特殊功能寄存器,使CPU 处于安全状态,
+  43   1                          //一次连续的IAP 操作完成之后建议关闭IAP 功能,不需要每次都关
+  44   1          return (IAP_DATA);
+  45   1      }
+  46          
+  47          
+  48          
+  49          /****************************************************************************/
+  50          /* FLASH_PageErase                                                          */ 
+  51          /*This routine erases the FLASH page containing the linear FLASH addres     */ 
+  52          /* <addr>.                                                                  */ 
+  53          /****************************************************************************/
+  54          void FLASH_PageErase (FLADDR addr)
+C51 COMPILER V9.54   FLASHFUNCTION                                                         06/14/2016 11:04:00 PAGE 2   
+
+  55          {
+  56   1        
+  57   1          IAP_CONTR = ENABLE_ISP;         //打开IAP 功能, 设置Flash 操作等待时间
+  58   1          IAP_CMD = 0x03;                 //IAP/ISP/EEPROM 扇区擦除命令
+  59   1      
+  60   1          IAP_ADDRH = (addr&0xff00)>>8;    //设置目标单元地址的高8 位地址
+  61   1          IAP_ADDRL = (addr&0xff);    //设置目标单元地址的低8 位地址
+  62   1      
+  63   1          EA=0;
+  64   1          IAP_TRIG = 0x5A;   //先送 5Ah,再送A5h 到ISP/IAP 触发寄存器,每次都需如此
+  65   1          IAP_TRIG = 0xA5;   //送完A5h 后，ISP/IAP 命令立即被触发起动
+  66   1          _nop_();
+  67   1      
+  68   1          EA=1;
+  69   1          IAP_Disable();  //关闭IAP 功能, 清相关的特殊功能寄存器,使CPU 处于安全状态,
+  70   1        //一次连续的IAP 操作完成之后建议关闭IAP 功能,不需要每次都关
+  71   1      }
+  72          void IAP_Disable()
+  73          {
+  74   1          //关闭IAP 功能, 清相关的特殊功能寄存器,使CPU 处于安全状态,
+  75   1          //一次连续的IAP 操作完成之后建议关闭IAP 功能,不需要每次都关
+  76   1          IAP_CONTR = 0;      //关闭IAP 功能
+  77   1          IAP_CMD   = 0;      //清命令寄存器,使命令寄存器无命令,此句可不用
+  78   1          IAP_TRIG  = 0;      //清命令触发寄存器,使命令触发寄存器无触发,此句可不用
+  79   1          IAP_ADDRH = 0x80;
+  80   1          IAP_ADDRL = 0;
+  81   1      }
+  82          
+  83          
+  84          
+  85          /* 写数据进 数据Flash存储器, 只在同一个扇区内写，不保留原有数据 */
+  86          /* begin_addr,被写数据Flash开始地址；counter,连续写多少个字节； array[]，数据来源   */
+  87          UCHAR sequential_write_flash_in_one_sector(UINT begin_addr, UINT counter, UCHAR array[])
+  88          {
+  89   1          UINT i = 0;
+  90   1          UINT in_sector_begin_addr = 0;
+  91   1          UINT sector_addr = 0;
+  92   1      
+  93   1          FLASH_PageErase(begin_addr);
+  94   1      
+  95   1          for(i=0; i<counter; i++)
+  96   1          {
+  97   2              /* 写一个字节 */
+  98   2              FLASH_ByteWrite(begin_addr, array[i]);
+  99   2              /*  比较对错 */
+ 100   2              if (FLASH_ByteRead(begin_addr) != array[i])
+ 101   2              {
+ 102   3                  IAP_Disable();
+ 103   3                  return 0;
+ 104   3              }
+ 105   2              begin_addr++;
+ 106   2          }
+ 107   1          IAP_Disable();
+ 108   1          return  1;
+ 109   1      }
+ 110          
+ 111          
+ 112          
+ 113          /****************************************************/
+ 114          /*以下部分为FLASH_W25Q64读写程序*/
+ 115          /****************************************************/
+ 116          /***********************************************
+C51 COMPILER V9.54   FLASHFUNCTION                                                         06/14/2016 11:04:00 PAGE 3   
+
+ 117          函数名称：sFLASH_SendByte
+ 118          功    能：向W25Q64 FLASH发送一个字节数据。
+ 119          入口参数：dat:发送的数据
+ 120          返 回 值：无  
+ 121          备    注：无
+ 122          ************************************************/
+ 123          void sFLASH_SendByte(unsigned char dat)
+ 124          {
+ 125   1      unsigned char i;         //定义计数器
+ 126   1      //送出数据
+ 127   1      for(i=0;i<8;i++)      
+ 128   1      { W25Q64_WCK_Clr();
+ 129   2      //先发送高字节
+ 130   2      if( (dat&0x80)==0x80 )
+ 131   2      {W25Q64_WDI_Set();}
+ 132   2      else
+ 133   2      {W25Q64_WDI_Clr();}
+ 134   2       Delay_1us(); 
+ 135   2      W25Q64_WCK_Set();
+ 136   2      //数据左移
+ 137   2        dat<<=1;                
+ 138   2      }  
+ 139   1      }
+ 140          /***********************************************
+ 141          函数名称：sFLASH_ReadByte
+ 142          功    能：从W25Q64 FLASH读取一个字节数据。
+ 143          入口参数：无
+ 144          返 回 值：unsigned char：读出的数据。 
+ 145          备    注：无
+ 146          ************************************************/
+ 147          unsigned char sFLASH_ReadByte(void)
+ 148          {
+ 149   1      unsigned char i;
+ 150   1      unsigned char dat = 0;
+ 151   1      W25Q64_WDO_Set();
+ 152   1      W25Q64_WCK_Clr();
+ 153   1      for (i=0; i<8; i++)             //8位计数器
+ 154   1      {W25Q64_WCK_Set();           //时钟线拉高
+ 155   2      Delay_1us();
+ 156   2      dat <<= 1;                  //数据右移一位
+ 157   2      if (WDO) 
+ 158   2      {dat |= 0x01;            //读取数据
+ 159   3      }
+ 160   2      W25Q64_WCK_Clr();           //时钟线拉低
+ 161   2      }
+ 162   1      return dat;
+ 163   1      }
+ 164          /***********************************************
+ 165          函数名称：sFLASH_WriteEnable
+ 166          功    能：写使能。
+ 167          入口参数：无
+ 168          返 回 值：无  
+ 169          备    注：无
+ 170          ************************************************/
+ 171          void sFLASH_WriteEnable(void)
+ 172          {   //使能芯片 
+ 173   1      W25Q64_WCS_Clr();
+ 174   1      //发送写使能指令 
+ 175   1      sFLASH_SendByte(sFLASH_CMD_WREN);
+ 176   1      //禁止芯片 
+ 177   1      W25Q64_WCS_Set();
+ 178   1      }
+C51 COMPILER V9.54   FLASHFUNCTION                                                         06/14/2016 11:04:00 PAGE 4   
+
+ 179          /***********************************************
+ 180          函数名称：sFLASH_WaitForWriteEnd
+ 181          功    能：等待写结束
+ 182          入口参数：无
+ 183          返 回 值：无  
+ 184          备    注：无
+ 185          ************************************************/
+ 186          void sFLASH_WaitForWriteEnd(void)
+ 187          {unsigned char flashstatus = 0;
+ 188   1      //芯片使能 
+ 189   1      W25Q64_WCS_Clr();
+ 190   1      //发送读取寄存器指令
+ 191   1      sFLASH_SendByte(sFLASH_CMD_RDSR);
+ 192   1      //循环读取忙标记直到忙结束 
+ 193   1      do
+ 194   1      { flashstatus = sFLASH_ReadByte();}
+ 195   1      //判断忙标记
+ 196   1      while ((flashstatus & sFLASH_WIP_FLAG) == 0x01); 
+ 197   1      //芯片禁止 
+ 198   1      W25Q64_WCS_Set();
+ 199   1      }
+ 200          /***********************************************
+ 201          函数名称：sFLASH_ReadID
+ 202          功    能：从W25Q64 FLASH读取器件ID号。
+ 203          入口参数：无
+ 204          返 回 值：unsigned int：读出的ID。  
+ 205          备    注：无
+ 206          ************************************************/
+ 207          unsigned int sFLASH_ReadID(void)
+ 208          {
+ 209   1      unsigned int Temp = 0; 
+ 210   1      unsigned char Temp0 = 0, Temp1 = 0;
+ 211   1      //使能flash
+ 212   1      W25Q64_WCS_Clr();
+ 213   1      //发送读flash  id号指令
+ 214   1      sFLASH_SendByte(sFLASH_CMD_RDID);
+ 215   1      //发送24位地址 地址为0
+ 216   1      sFLASH_SendByte(0);
+ 217   1      sFLASH_SendByte(0);
+ 218   1      sFLASH_SendByte(0);
+ 219   1      //读取返回的数据
+ 220   1      Temp0 = sFLASH_ReadByte();
+ 221   1      Temp1 = sFLASH_ReadByte();
+ 222   1      //禁止flash
+ 223   1      W25Q64_WCS_Set();
+ 224   1      //组合数据
+ 225   1      Temp = (Temp0 << 8) | Temp1;
+ 226   1      return Temp;
+ 227   1      }
+ 228          /***********************************************
+ 229          函数名称：sFLASH_WritePage
+ 230          功    能：向W25Q64 FLASH写入一页数据。
+ 231          入口参数：pBuffer:存放写入的数据的缓冲区，
+ 232                WriteAddr：开始写入的地址，
+ 233            NumByteToWrite：写入的字节数
+ 234          返 回 值：无：读出的数据。  
+ 235          备    注：无
+ 236          ************************************************/
+ 237          void sFLASH_WritePage(unsigned char* pBuffer, FLADDR WriteAddr, unsigned int NumByteToWrite)
+ 238          {//芯片写使能，写之前需写使能，否则无法写入 
+ 239   1      sFLASH_WriteEnable();
+ 240   1      //芯片使能 
+C51 COMPILER V9.54   FLASHFUNCTION                                                         06/14/2016 11:04:00 PAGE 5   
+
+ 241   1      W25Q64_WCS_Clr();
+ 242   1      //发送写指令 
+ 243   1      sFLASH_SendByte(sFLASH_CMD_PAGEPRO);
+ 244   1      //发送24位地址 
+ 245   1      sFLASH_SendByte((WriteAddr & 0xFF0000) >> 16);
+ 246   1      sFLASH_SendByte((WriteAddr & 0xFF00) >> 8);
+ 247   1      sFLASH_SendByte(WriteAddr & 0xFF);
+ 248   1      //循环按字节写入 
+ 249   1      while (NumByteToWrite--)
+ 250   1      {sFLASH_SendByte(*pBuffer);
+ 251   2       pBuffer++;
+ 252   2      }
+ 253   1      //芯片禁止 
+ 254   1      W25Q64_WCS_Set();
+ 255   1      //等待写完成
+ 256   1      sFLASH_WaitForWriteEnd();
+ 257   1      }
+ 258          
+ 259          /***********************************************
+ 260          函数名称：sFLASH_ReadBuffer
+ 261          功    能：从W25Q64 FLASH读取一串数据。
+ 262          入口参数：pBuffer:接收该字符串的缓冲区
+ 263                ReadAddr：开始读的地址
+ 264            NumByteToRead：读的字节数
+ 265          返 回 值：无  
+ 266          备    注：无
+ 267          ************************************************/
+ 268          void sFLASH_ReadBuffer(unsigned char * pBuffer, FLADDR ReadAddr, unsigned int NumByteToRead)
+ 269          {//芯片使能 
+ 270   1      W25Q64_WCS_Clr();
+ 271   1      
+ 272   1      //发送读命令
+ 273   1      sFLASH_SendByte(sFLASH_CMD_READ);
+ 274   1      
+ 275   1      //发送24位地址 
+ 276   1      sFLASH_SendByte((ReadAddr & 0xFF0000) >> 16);
+ 277   1      sFLASH_SendByte((ReadAddr& 0xFF00) >> 8);
+ 278   1      sFLASH_SendByte(ReadAddr & 0xFF);
+ 279   1      
+ 280   1      //循环按字节读取
+ 281   1      while (NumByteToRead--) 
+ 282   1      {
+ 283   2        *pBuffer = sFLASH_ReadByte();
+ 284   2        pBuffer++;
+ 285   2      }
+ 286   1      
+ 287   1      //芯片禁止 
+ 288   1      W25Q64_WCS_Set();
+ 289   1      }
+ 290          /***********************************************
+ 291          函数名称：sFLASH_EraseSector
+ 292          功    能：擦除W25Q64 FLASH的一个扇区。
+ 293          入口参数：无
+ 294          返 回 值：unsigned char：读出的数据。 
+ 295          备    注：无
+ 296          ************************************************/
+ 297          void sFLASH_EraseSector(FLADDR SectorAddr)
+ 298          {   //芯片写使能
+ 299   1      sFLASH_WriteEnable();
+ 300   1      //芯片使能 
+ 301   1      W25Q64_WCS_Clr();
+ 302   1      //发送扇区擦除指令
+C51 COMPILER V9.54   FLASHFUNCTION                                                         06/14/2016 11:04:00 PAGE 6   
+
+ 303   1      sFLASH_SendByte(sFLASH_CMD_SE);
+ 304   1      //发送24位地址
+ 305   1      sFLASH_SendByte((SectorAddr & 0xFF0000) >> 16);
+ 306   1      sFLASH_SendByte((SectorAddr & 0xFF00) >> 8);
+ 307   1      sFLASH_SendByte(SectorAddr & 0xFF);
+ 308   1      //芯片禁止 
+ 309   1      W25Q64_WCS_Set();
+ 310   1      //等待写完成
+ 311   1      sFLASH_WaitForWriteEnd();
+ 312   1      }
+ 313          /***********************************************
+ 314          函数名称：sFLASH_64KBEraseSector
+ 315          功    能：擦除W25Q64 FLASH的一个块。
+ 316          入口参数：无
+ 317          返 回 值：无
+ 318          备    注：无
+ 319          ************************************************/
+ 320          void sFLASH_64KBEraseSector(FLADDR SectorAddr)
+ 321          {   //芯片写使能
+ 322   1      sFLASH_WriteEnable();
+ 323   1      //芯片使能 
+ 324   1      W25Q64_WCS_Clr();
+ 325   1      //发送扇区擦除指令
+ 326   1      sFLASH_SendByte(sFLASH_CMD_BE);
+ 327   1      //发送24位地址
+ 328   1      sFLASH_SendByte((SectorAddr & 0xFF0000) >> 16);
+ 329   1      sFLASH_SendByte((SectorAddr & 0xFF00) >> 8);
+ 330   1      sFLASH_SendByte(SectorAddr & 0xFF);
+ 331   1      //芯片禁止 
+ 332   1      W25Q64_WCS_Set();
+ 333   1      //等待写完成
+ 334   1      sFLASH_WaitForWriteEnd();
+ 335   1      }
+ 336          
+ 337          /***********************************************
+ 338          函数名称：sFLASH_EraseSector
+ 339          功    能：擦除W25Q64 FLASH整个芯片,
+ 340          需要大概20s左右的时间。
+ 341          入口参数：无
+ 342          返 回 值：unsigned char：读出的数据。 
+ 343          备    注：无
+ 344          ************************************************/
+ 345          void sFLASH_EraseFlash(void)
+ 346          {   //芯片写使能
+ 347   1          sFLASH_WriteEnable();
+ 348   1          //芯片使能 
+ 349   1          W25Q64_WCS_Clr();
+ 350   1          //发送扇区擦除指令
+ 351   1          sFLASH_SendByte(sFLASH_CMD_CE);
+ 352   1      
+ 353   1          //芯片禁止 
+ 354   1          W25Q64_WCS_Set();
+ 355   1          //等待写完成
+ 356   1          sFLASH_WaitForWriteEnd();
+ 357   1      }
+ 358          
+ 359          
+ 360          
+ 361          
+ 362          
+ 363          
+ 364          void FLASH_W25Q64_Clear (FLADDR dest, unsigned numbytes)
+C51 COMPILER V9.54   FLASHFUNCTION                                                         06/14/2016 11:04:00 PAGE 7   
+
+ 365          {
+ 366   1        
+ 367   1       
+ 368   1         FLADDR dest_1_page_start;           // first address in 1st page
+ 369   1                                             // containing <dest>
+ 370   1         FLADDR dest_1_page_end;             // last address in 1st page
+ 371   1                                             // containing <dest>
+ 372   1         FLADDR dest_2_page_start;           // first address in 2nd page
+ 373   1                                             // containing <dest>
+ 374   1         FLADDR dest_2_page_end;             // last address in 2nd page
+ 375   1                                             // containing <dest>
+ 376   1         unsigned numbytes_remainder;        // when crossing page boundary,
+ 377   1                                             // number of <src> bytes on 2nd page
+ 378   1         FLADDR FLASH_pagesize;            // size of FLASH page to update
+ 379   1       
+ 380   1         FLADDR  wptr;                       // write address
+ 381   1         FLADDR  rptr;                       // read address
+ 382   1       
+ 383   1         unsigned length;
+ 384   1         unsigned Full_BlockNum = 0,NoFull_BlockNum = 0;
+ 385   1         FLASH_pagesize = FLASH_W25Q64_PAGESIZE;
+ 386   1       
+ 387   1         dest_1_page_start = dest & ~(FLASH_pagesize - 1);
+ 388   1         dest_1_page_end = dest_1_page_start + FLASH_pagesize - 1;
+ 389   1         dest_2_page_start = (dest + numbytes)  & ~(FLASH_pagesize - 1);
+ 390   1         dest_2_page_end = dest_2_page_start + FLASH_pagesize - 1;
+ 391   1       
+ 392   1         if (dest_1_page_end == dest_2_page_end) {
+ 393   2            // 1. Erase Scratch page    擦除草稿临时页
+ 394   2            FLASH_W25Q64_PageErase (FLASH_W25Q64_TEMP);
+ 395   2            // 2. Copy bytes from first byte of dest page to dest-1 to Scratch page
+ 396   2           //从dest 0 到dest-1 比特复制到草稿临时页
+ 397   2            wptr = FLASH_W25Q64_TEMP;
+ 398   2            rptr = dest_1_page_start;
+ 399   2            length = dest - dest_1_page_start;
+ 400   2            Full_BlockNum = (length&0x0ff00)>>8;
+ 401   2            NoFull_BlockNum = length&0x00ff;
+ 402   2      
+ 403   2            if(Full_BlockNum>0)/*超过一页后，整数页处理*/
+ 404   2           { 
+ 405   3             FLASH_W25Q64_Copy (wptr, rptr, Full_BlockNum,1);
+ 406   3             //剩下的不是整数页按另外单独方式写入
+ 407   3             FLASH_W25Q64_Copy (wptr + Full_BlockNum*256, rptr+ Full_BlockNum*256, NoFull_BlockNum,0);
+ 408   3            }else{
+ 409   3              FLASH_W25Q64_Copy (wptr, rptr, NoFull_BlockNum,0);
+ 410   3            }
+ 411   2            // 3. Copy from (dest+numbytes) to dest_page_end to Scratch page
+ 412   2       
+ 413   2            wptr = FLASH_W25Q64_TEMP + dest - dest_1_page_start + numbytes;
+ 414   2            rptr = dest + numbytes;
+ 415   2            length = dest_1_page_end - dest - numbytes + 1;
+ 416   2            Full_BlockNum = (length&0x0ff00)>>8;
+ 417   2            NoFull_BlockNum = length&0x00ff;
+ 418   2            if(Full_BlockNum>0)/*超过一页后，整数页处理*/
+ 419   2           { 
+ 420   3             FLASH_W25Q64_Copy (wptr, rptr, Full_BlockNum,1);
+ 421   3             FLASH_W25Q64_Copy (wptr + Full_BlockNum*256, rptr+ Full_BlockNum*256, NoFull_BlockNum,0);
+ 422   3            }else{
+ 423   3              FLASH_W25Q64_Copy (wptr, rptr, NoFull_BlockNum,0);
+ 424   3            }
+ 425   2       
+ 426   2            // 4. Erase destination page
+C51 COMPILER V9.54   FLASHFUNCTION                                                         06/14/2016 11:04:00 PAGE 8   
+
+ 427   2            FLASH_W25Q64_PageErase (dest_1_page_start);
+ 428   2       
+ 429   2            // 5. Copy Scratch page to destination page
+ 430   2            wptr = dest_1_page_start;
+ 431   2            rptr = FLASH_W25Q64_TEMP;
+ 432   2            length = FLASH_pagesize;
+ 433   2            Full_BlockNum = (length&0x0ff00)>>8;
+ 434   2            NoFull_BlockNum = length&0x00ff;
+ 435   2                  if(Full_BlockNum>0)/*超过一页后，整数页处理*/
+ 436   2           { 
+ 437   3             FLASH_W25Q64_Copy (wptr, rptr, Full_BlockNum,1);
+ 438   3             FLASH_W25Q64_Copy (wptr + Full_BlockNum*256, rptr+ Full_BlockNum*256, NoFull_BlockNum,0);
+ 439   3            }else{
+ 440   3              FLASH_W25Q64_Copy (wptr, rptr, NoFull_BlockNum,0);
+ 441   3            }
+ 442   2       
+ 443   2          
+ 444   2      } else {
+ 445   2                                  // value crosses page boundary
+ 446   2            // 1. Erase Scratch page
+ 447   2            FLASH_W25Q64_PageErase (FLASH_W25Q64_TEMP);
+ 448   2       
+ 449   2            // 2. Copy bytes from first byte of dest page to dest-1 to Scratch page
+ 450   2       
+ 451   2            wptr = FLASH_W25Q64_TEMP;
+ 452   2            rptr = dest_1_page_start;
+ 453   2            length = dest - dest_1_page_start;
+ 454   2            Full_BlockNum = (length&0x0ff00)>>8;
+ 455   2            NoFull_BlockNum = length&0x00ff;
+ 456   2                  if(Full_BlockNum>0)/*超过一页后，整数页处理*/
+ 457   2           { 
+ 458   3             FLASH_W25Q64_Copy (wptr, rptr, Full_BlockNum,1);
+ 459   3             //剩下的不是整数页按另外单独方式写入
+ 460   3             FLASH_W25Q64_Copy (wptr + Full_BlockNum*256, rptr+ Full_BlockNum*256, NoFull_BlockNum,0);
+ 461   3            }else{
+ 462   3              FLASH_W25Q64_Copy (wptr, rptr, NoFull_BlockNum,0);
+ 463   3            }
+ 464   2       
+ 465   2            // 3. Erase destination page 1
+ 466   2            FLASH_W25Q64_PageErase (dest_1_page_start);
+ 467   2       
+ 468   2            // 4. Copy Scratch page to destination page 1
+ 469   2            wptr = dest_1_page_start;
+ 470   2            rptr = FLASH_W25Q64_TEMP;
+ 471   2            length = FLASH_pagesize;
+ 472   2            Full_BlockNum = (length&0x0ff00)>>8;
+ 473   2            NoFull_BlockNum = length&0x00ff;
+ 474   2                  if(Full_BlockNum>0)/*超过一页后，整数页处理*/
+ 475   2           { 
+ 476   3             FLASH_W25Q64_Copy (wptr, rptr, Full_BlockNum,1);
+ 477   3             FLASH_W25Q64_Copy (wptr + Full_BlockNum*256, rptr+ Full_BlockNum*256, NoFull_BlockNum,0);
+ 478   3            }else{
+ 479   3              FLASH_W25Q64_Copy (wptr, rptr, NoFull_BlockNum,0);
+ 480   3            }
+ 481   2       
+ 482   2            // now handle 2nd page
+ 483   2       
+ 484   2            // 5. Erase Scratch page
+ 485   2            FLASH_W25Q64_PageErase (FLASH_W25Q64_TEMP);
+ 486   2       
+ 487   2            // 6. Copy bytes from numbytes remaining to dest-2_page_end to Scratch page
+ 488   2       
+C51 COMPILER V9.54   FLASHFUNCTION                                                         06/14/2016 11:04:00 PAGE 9   
+
+ 489   2            numbytes_remainder = numbytes - (dest_1_page_end - dest + 1);
+ 490   2            wptr = FLASH_W25Q64_TEMP + numbytes_remainder;
+ 491   2            rptr = dest_2_page_start + numbytes_remainder;
+ 492   2            length = FLASH_pagesize - numbytes_remainder;
+ 493   2            Full_BlockNum = (length&0x0ff00)>>8;
+ 494   2            NoFull_BlockNum = length&0x00ff;
+ 495   2                  if(Full_BlockNum>0)/*超过一页后，整数页处理*/
+ 496   2           { 
+ 497   3             FLASH_W25Q64_Copy (wptr, rptr, Full_BlockNum,1);
+ 498   3             FLASH_W25Q64_Copy (wptr + Full_BlockNum*256, rptr+ Full_BlockNum*256, NoFull_BlockNum,0);
+ 499   3            }else{
+ 500   3              FLASH_W25Q64_Copy (wptr, rptr, NoFull_BlockNum,0);
+ 501   3            }
+ 502   2       
+ 503   2            // 7. Erase destination page 2
+ 504   2            FLASH_W25Q64_PageErase (dest_2_page_start);
+ 505   2       
+ 506   2            // 8. Copy Scratch page to destination page 2
+ 507   2            wptr = dest_2_page_start;
+ 508   2            rptr = FLASH_W25Q64_TEMP;
+ 509   2            length = FLASH_pagesize;
+ 510   2            Full_BlockNum = (length&0x0ff00)>>8;
+ 511   2            NoFull_BlockNum = length&0x00ff;
+ 512   2            if(Full_BlockNum>0)/*超过一页后，整数页处理*/
+ 513   2           { 
+ 514   3             FLASH_W25Q64_Copy (wptr, rptr, Full_BlockNum,1);
+ 515   3             FLASH_W25Q64_Copy (wptr + Full_BlockNum*256, rptr+ Full_BlockNum*256, NoFull_BlockNum,0);
+ 516   3            }else{
+ 517   3              FLASH_W25Q64_Copy (wptr, rptr, NoFull_BlockNum,0);
+ 518   3            }
+ 519   2          
+ 520   2      }
+ 521   1       
+ 522   1      }
+ 523          
+ 524          
+ 525          
+ 526          //-----------------------------------------------------------------------------
+ 527          // FLASH_W25Q64_Write
+ 528          //-----------------------------------------------------------------------------
+ 529          //
+ 530          // This routine copies <numbytes> from <src> to the linear FLASH_W25Q64 address
+ 531          // <dest>.
+ 532          //
+ 533          void FLASH_W25Q64_Write (FLADDR dest, char *src, FLADDR numbytes)
+ 534          {
+ 535   1         FLADDR i;
+ 536   1         for (i = dest; i < dest+numbytes; i++) {
+ 537   2            FLASH_W25Q64_ByteWrite (i, *src++);
+ 538   2         }
+ 539   1      }
+ 540          
+ 541          
+ 542          
+ 543          void FLASH_W25Q64_Update (FLADDR dest, char *src, unsigned numbytes)
+ 544          {
+ 545   1         // 1. Erase <numbytes> starting from <dest>
+ 546   1         FLASH_W25Q64_Clear (dest, numbytes);
+ 547   1         // 2. Write <numbytes> from <src> to <dest>
+ 548   1         FLASH_W25Q64_Write (dest, src, numbytes);
+ 549   1      }
+ 550          //-----------------------------------------------------------------------------
+C51 COMPILER V9.54   FLASHFUNCTION                                                         06/14/2016 11:04:00 PAGE 10  
+
+ 551          // FLASH_W25Q64_Read
+ 552          //-----------------------------------------------------------------------------
+ 553          //
+ 554          // This routine copies <numbytes> from the linear FLASH_W25Q64 address <src> to
+ 555          // <dest>.
+ 556          //
+ 557          char * FLASH_W25Q64_Read (char *dest, FLADDR src, unsigned numbytes)
+ 558          {
+ 559   1         FLADDR i;
+ 560   1         for (i = 0; i < numbytes; i++) {
+ 561   2            *dest++ = FLASH_W25Q64_ByteRead (src+i);
+ 562   2         }
+ 563   1         return dest;
+ 564   1      }
+ 565          //-----------------------------------------------------------------------------
+ 566          // FLASH_W25Q64_Copy
+ 567          //-----------------------------------------------------------------------------
+ 568          //
+ 569          // This routine copies <numbytes> from <src> to the linear FLASH_W25Q64 address
+ 570          // <dest>.
+ 571          //
+ 572          void FLASH_W25Q64_Copy (FLADDR dest, FLADDR src,unsigned numbytes,bit IsFullBlockCopy)
+ 573          {
+ 574   1         FLADDR i;
+ 575   1        unsigned char DataBuffer[256];
+ 576   1        if(IsFullBlockCopy){
+ 577   2        for(i=0;i<numbytes;i++)
+ 578   2             { sFLASH_ReadBuffer(DataBuffer, (src + i*256), 256);
+ 579   3             sFLASH_WritePage(DataBuffer, (dest+i*256), 256);
+ 580   3       }
+ 581   2        }else{
+ 582   2          sFLASH_ReadBuffer(DataBuffer,src , numbytes);
+ 583   2          sFLASH_WritePage(DataBuffer, dest, numbytes);
+ 584   2         }
+ 585   1       }
+ 586          
+ 587          //-----------------------------------------------------------------------------
+ 588          // FLASH_W25Q64_Fill
+ 589          //-----------------------------------------------------------------------------
+ 590          //
+ 591          // This routine fills the FLASH_W25Q64 beginning at <addr> with <lenght> bytes.
+ 592          //
+ 593          void FLASH_W25Q64_Fill (FLADDR addr, ULONG length, unsigned char fill)
+ 594          {
+ 595   1         FLADDR i;
+ 596   1         for (i = 0; i < length; i++) {
+ 597   2            FLASH_W25Q64_ByteWrite (addr+i, fill);
+ 598   2         }
+ 599   1      }
+ 600          
+ 601          
+ 602          
+ 603          
+ 604          
+ 605          void FLASH_W25Q64_PageErase (FLADDR addr){
+ 606   1      
+ 607   1      sFLASH_EraseSector(addr);
+ 608   1      }
+ 609          
+ 610          void FLASH_W25Q64_ByteWrite (FLADDR addr, char byte)
+ 611          {
+ 612   1      
+C51 COMPILER V9.54   FLASHFUNCTION                                                         06/14/2016 11:04:00 PAGE 11  
+
+ 613   1        sFLASH_WritePage(&byte,addr,1);
+ 614   1      }
+ 615          
+ 616          unsigned char FLASH_W25Q64_ByteRead (FLADDR addr)
+ 617          {
+ 618   1        unsigned char dat;
+ 619   1      
+ 620   1        sFLASH_ReadBuffer(&dat,addr,1);
+ 621   1        return dat;
+ 622   1      }
+ 623          
+ 624          
+ 625          void Delay_1us(void)    //延时1us
+ 626          {
+ 627   1      unsigned char i=1;
+ 628   1      while(i--);  //WDT_CONTR=0x34;
+ 629   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   4123    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----     422
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

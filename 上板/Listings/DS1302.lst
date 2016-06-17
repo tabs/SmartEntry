@@ -1,0 +1,189 @@
+C51 COMPILER V9.54   DS1302                                                                06/16/2016 19:33:40 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE DS1302
+OBJECT MODULE PLACED IN .\Objects\DS1302.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE DS1302.c LARGE OPTIMIZE(8,SPEED) BROWSE INTVECTOR(0X2000) DEBUG OBJECTEX
+                    -TEND PRINT(.\Listings\DS1302.lst) TABS(2) OBJECT(.\Objects\DS1302.obj)
+
+line level    source
+
+   1          /*ds1302显示时间（通过串口调试助手）*/
+   2          #include "DS1302.h"
+   3          
+   4          
+   5          
+   6          
+   7          void ds1302_reset()//令SCK=0；RST=1
+   8          {
+   9   1        RST=0;//停止数据传送
+  10   1        SCK=0;//时钟总线清零
+  11   1        RST=1;//数据操作
+  12   1      }
+  13          
+  14          //写一个字节
+  15          void ds1302_write_byte(uint8 dat)
+  16          {
+  17   1        uint8 i;
+  18   1        
+  19   1       for(i=0;i<8;i++)
+  20   1       {
+  21   2         SDA=dat & 0x01;
+  22   2         SCK=1;
+  23   2         SCK=0;
+  24   2         dat>>=1;
+  25   2       }
+  26   1      }
+  27          
+  28          //读一个字节
+  29          //对于数据输出：开始的8 个SCLK 周期，输入一个读命令字节，数据字节在后8 个SCLK周期的下降沿输出
+  30          //注意，第一个数据字节的第一个下降沿发生后，命令字的最后一位被写入
+  31          //（Note that the first data bit to be transmitted occurs on the first falling edge after the last bit of 
+             -the command byte is written. ），
+  32          //也就是命令字节最后一个字节写入后产生的下降沿使得第一个数据位被读取
+  33          
+  34          uint8 ds1302_read_byte()
+  35          {
+  36   1       uint8 i,dat=0;//用dat存储读到的数据
+  37   1       for(i=0;i<8;i++)
+  38   1       {
+  39   2          
+  40   2        dat>>=1;  
+  41   2        if(SDA==1)
+  42   2          dat=dat | 0x80;//因为从低位开始读
+  43   2        SCK=1;
+  44   2        SCK=0;  //由上面解释可以知道：我们首先应该判断  if(SDA==1)，然后进行SCK=1，SCK=0
+  45   2      
+  46   2       }
+  47   1       return dat;
+  48   1      }
+  49          
+  50          //清除写保护
+  51          void ds1302_clear_WP()
+  52          {
+  53   1        ds1302_reset();
+C51 COMPILER V9.54   DS1302                                                                06/16/2016 19:33:40 PAGE 2   
+
+  54   1        RST=1;
+  55   1        ds1302_write_byte(0x8E);//写入地址
+  56   1        ds1302_write_byte(0x00);//写入数据
+  57   1        //写完后
+  58   1        SDA=0;
+  59   1        RST=0;
+  60   1        
+  61   1      }
+  62          
+  63          //设置写保护
+  64          void ds1302_set_WP()
+  65          {
+  66   1        ds1302_reset();
+  67   1        RST=1;
+  68   1        ds1302_write_byte(0x8E);//写入地址
+  69   1        ds1302_write_byte(0x80);//写入数据
+  70   1        //写完后
+  71   1        SDA=0;
+  72   1        RST=0;
+  73   1        
+  74   1      }
+  75          
+  76          
+  77          
+  78          //写入ds1302
+  79          void ds1302_write(uint8 addr,uint8 dat)
+  80          {
+  81   1        ds1302_reset();
+  82   1        RST=1;
+  83   1        ds1302_write_byte(addr);//写入地址
+  84   1        ds1302_write_byte(dat);//写入数据
+  85   1        //写完后
+  86   1        RST=0;
+  87   1        SDA=0;
+  88   1      }
+  89          
+  90          //从ds1302读数据
+  91          uint8 ds1302_read(uint8 addr)
+  92          {
+  93   1        uint8 temp=0;//存储读出来的数据
+  94   1        ds1302_reset();
+  95   1        RST=1;
+  96   1        ds1302_write_byte(addr);//写入地址
+  97   1        temp=ds1302_read_byte();//写入数据
+  98   1        //写完后
+  99   1        RST=0;
+ 100   1        SDA=0;
+ 101   1        return temp;
+ 102   1      }
+ 103          
+ 104          void delay(uint16 n)
+ 105          { 
+ 106   1        while(n--);
+ 107   1      }
+ 108          
+ 109          
+ 110          /**
+ 111           * 设定时钟数据
+ 112           其中涉及二进制和BCD转换  因为ds1302存BCD ，但是机器只认识二进制
+ 113           例如：存入ds1302为50  0101 0000  那么我们写入的是ds1302_write（80）
+ 114          */
+ 115          void ds1302_set_time(uint8 *timedata)
+C51 COMPILER V9.54   DS1302                                                                06/16/2016 19:33:40 PAGE 3   
+
+ 116          {
+ 117   1        uint8 i;
+ 118   1        uint8 temp=0;
+ 119   1        for(i=0;i<7;i++)
+ 120   1        {
+ 121   2          temp=timedata[i]/10;
+ 122   2          timedata[i]=timedata[i]%10;
+ 123   2          timedata[i]=timedata[i]+temp*16;
+ 124   2        }
+ 125   1        ds1302_clear_WP();//对ds1302操作前先将wp位清零
+ 126   1        temp=DS1302_W_ADDR;//写入起始位置
+ 127   1        for(i=0;i<7;i++)
+ 128   1        {
+ 129   2          ds1302_write(temp,timedata[i]);
+ 130   2          temp+=2;
+ 131   2        }
+ 132   1        ds1302_set_WP();
+ 133   1      
+ 134   1      }
+ 135          
+ 136          /**
+ 137           * 读时钟数据（BCD格式）
+ 138          */
+ 139          void ds1302_read_time(uint8 *timedata)
+ 140          {
+ 141   1         uint8 i,temp;
+ 142   1         temp=DS1302_R_ADDR;//读起始位置
+ 143   1         for(i=0;i<7;i++)
+ 144   1         {
+ 145   2           timedata[i]=ds1302_read(temp);
+ 146   2         temp+=2;
+ 147   2         }
+ 148   1      }
+ 149          
+ 150          
+ 151          
+ 152          ///**
+ 153          // * 将数据转换成ASC码并通过UART发送出去
+ 154          //*/
+ 155          //void UART_Send_Dat(uint8 dat)  //注意是关于16取余
+ 156          //{
+ 157          //   UART_Send_Byte(dat/16+'0');
+ 158          //   UART_Send_Byte(dat%16+'0');   
+ 159          //}
+ 160          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    323    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       7
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

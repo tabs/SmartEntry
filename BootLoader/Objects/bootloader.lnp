@@ -1,0 +1,4 @@
+".\Objects\STARTUP.obj",
+".\Objects\bootloader.obj" 
+TO ".\Objects\bootloader" 
+PRINT(".\Listings\bootloader.m51") RAMSIZE(256) 

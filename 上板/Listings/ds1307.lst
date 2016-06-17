@@ -1,0 +1,13 @@
+C51 COMPILER V9.54   DS1307                                                                03/17/2016 20:45:26 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE DS1307
+OBJECT MODULE PLACED IN .\Objects\ds1307.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE ds1307.c LARGE OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listi
+                    -ngs\ds1307.lst) TABS(2) OBJECT(.\Objects\ds1307.obj)
+
+line level    source
+
+*** ERROR C318 OF ds1307.c: can't open file 'ds1307.c'
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  1 ERROR(S)

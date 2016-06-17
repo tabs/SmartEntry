@@ -1,0 +1,326 @@
+BL51 BANKED LINKER/LOCATER V6.22                                                        06/12/2016  16:54:34  PAGE 1
+
+
+BL51 BANKED LINKER/LOCATER V6.22, INVOKED BY:
+C:\KEIL\C51\BIN\BL51.EXE .\Objects\STARTUP.obj, .\Objects\bootloader.obj TO .\Objects\bootloader PRINT (.\Listings\bootl
+>> oader.m51) RAMSIZE (256)
+
+
+MEMORY MODEL: SMALL
+
+
+INPUT MODULES INCLUDED:
+  .\Objects\STARTUP.obj (?C_STARTUP)
+  .\Objects\bootloader.obj (BOOTLOADER)
+  C:\KEIL\C51\LIB\C51S.LIB (?C?ULSHR)
+
+
+LINK MAP OF MODULE:  .\Objects\bootloader (?C_STARTUP)
+
+
+            TYPE    BASE      LENGTH    RELOCATION   SEGMENT NAME
+            -----------------------------------------------------
+
+            * * * * * * *   D A T A   M E M O R Y   * * * * * * *
+            REG     0000H     0008H     ABSOLUTE     "REG BANK 0"
+            DATA    0008H     000CH     UNIT         _DATA_GROUP_
+            IDATA   0014H     0001H     UNIT         ?STACK
+
+            * * * * * * *   C O D E   M E M O R Y   * * * * * * *
+            CODE    0000H     00BEH     ABSOLUTE     
+            CODE    00BEH     00E6H     UNIT         ?PR?BTLDER?BOOTLOADER
+            CODE    01A4H     0038H     UNIT         ?PR?_FLASH_BYTEREAD?BOOTLOADER
+            CODE    01DCH     0030H     UNIT         ?PR?_FLASH_BYTEWRITE?BOOTLOADER
+            CODE    020CH     002DH     UNIT         ?PR?_FLASH_PAGEERASE?BOOTLOADER
+            CODE    0239H     001CH     UNIT         ?PR?_DELAY_MS?BOOTLOADER
+            CODE    0255H     0016H     UNIT         ?PR?BTLDER_INIT_UART1?BOOTLOADER
+            CODE    026BH     0013H     UNIT         ?C?LIB_CODE
+            CODE    027EH     000DH     UNIT         ?PR?MAIN?BOOTLOADER
+            CODE    028BH     000DH     UNIT         ?PR?IAP_DISABLE?BOOTLOADER
+            CODE    0298H     000CH     UNIT         ?C_C51STARTUP
+
+
+
+OVERLAY MAP OF MODULE:   .\Objects\bootloader (?C_STARTUP)
+
+
+SEGMENT                                    DATA_GROUP 
+  +--> CALLED SEGMENT                    START    LENGTH
+--------------------------------------------------------
+?C_C51STARTUP                            -----    -----
+  +--> ?PR?MAIN?BOOTLOADER
+
+?PR?MAIN?BOOTLOADER                      -----    -----
+  +--> ?PR?BTLDER_INIT_UART1?BOOTLOADER
+  +--> ?PR?BTLDER?BOOTLOADER
+
+?PR?BTLDER?BOOTLOADER                    0008H    0007H
+  +--> ?PR?_FLASH_BYTEREAD?BOOTLOADER
+  +--> ?PR?_FLASH_PAGEERASE?BOOTLOADER
+  +--> ?PR?_FLASH_BYTEWRITE?BOOTLOADER
+  +--> ?PR?_DELAY_MS?BOOTLOADER
+BL51 BANKED LINKER/LOCATER V6.22                                                      06/12/2016  16:54:34  PAGE 2
+
+
+
+?PR?_FLASH_BYTEREAD?BOOTLOADER           000FH    0004H
+  +--> ?PR?IAP_DISABLE?BOOTLOADER
+
+?PR?_FLASH_PAGEERASE?BOOTLOADER          000FH    0004H
+  +--> ?PR?IAP_DISABLE?BOOTLOADER
+
+?PR?_FLASH_BYTEWRITE?BOOTLOADER          000FH    0005H
+  +--> ?PR?IAP_DISABLE?BOOTLOADER
+
+
+
+SYMBOL TABLE OF MODULE:  .\Objects\bootloader (?C_STARTUP)
+
+  VALUE           TYPE          NAME
+  ----------------------------------
+
+  -------         MODULE        ?C_STARTUP
+  C:0298H         SEGMENT       ?C_C51STARTUP
+  I:0014H         SEGMENT       ?STACK
+  C:0000H         PUBLIC        ?C_STARTUP
+  D:00E0H         SYMBOL        ACC
+  D:00F0H         SYMBOL        B
+  D:0083H         SYMBOL        DPH
+  D:0082H         SYMBOL        DPL
+  N:0000H         SYMBOL        IBPSTACK
+  N:0100H         SYMBOL        IBPSTACKTOP
+  N:0080H         SYMBOL        IDATALEN
+  C:029BH         SYMBOL        IDATALOOP
+  N:0000H         SYMBOL        PBPSTACK
+  N:0100H         SYMBOL        PBPSTACKTOP
+  N:0000H         SYMBOL        PDATALEN
+  N:0000H         SYMBOL        PDATASTART
+  N:0000H         SYMBOL        PPAGE
+  N:0000H         SYMBOL        PPAGEENABLE
+  D:00A0H         SYMBOL        PPAGE_SFR
+  D:0081H         SYMBOL        SP
+  C:0298H         SYMBOL        STARTUP1
+  N:0000H         SYMBOL        XBPSTACK
+  N:0000H         SYMBOL        XBPSTACKTOP
+  N:0000H         SYMBOL        XDATALEN
+  N:0000H         SYMBOL        XDATASTART
+  C:0000H         LINE#         126
+  C:0003H         LINE#         128
+  C:000BH         LINE#         130
+  C:0013H         LINE#         132
+  C:001BH         LINE#         134
+  C:0023H         LINE#         136
+  C:002BH         LINE#         138
+  C:0033H         LINE#         140
+  C:003BH         LINE#         142
+  C:0043H         LINE#         144
+  C:004BH         LINE#         146
+  C:0053H         LINE#         148
+  C:005BH         LINE#         150
+  C:0063H         LINE#         152
+  C:006BH         LINE#         154
+BL51 BANKED LINKER/LOCATER V6.22                                                      06/12/2016  16:54:34  PAGE 3
+
+
+  C:0073H         LINE#         156
+  C:007BH         LINE#         158
+  C:0083H         LINE#         160
+  C:008BH         LINE#         162
+  C:0093H         LINE#         164
+  C:009BH         LINE#         166
+  C:00A3H         LINE#         168
+  C:00ABH         LINE#         170
+  C:00B3H         LINE#         172
+  C:00BBH         LINE#         174
+  C:0298H         LINE#         181
+  C:029AH         LINE#         182
+  C:029BH         LINE#         183
+  C:029CH         LINE#         184
+  C:029EH         LINE#         236
+  C:02A1H         LINE#         246
+  -------         ENDMOD        ?C_STARTUP
+
+  -------         MODULE        BOOTLOADER
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:0080H         PUBLIC        P0
+  C:00BEH         PUBLIC        btlder
+  D:0090H         PUBLIC        P1
+  D:00A0H         PUBLIC        P2
+  D:00B0H         PUBLIC        P3
+  D:00C0H         PUBLIC        P4
+  D:00C8H         PUBLIC        P5
+  B:00A8H.7       PUBLIC        EA
+  D:00E8H         PUBLIC        P6
+  D:00F8H         PUBLIC        P7
+  D:00A2H         PUBLIC        P_SW1
+  D:00A8H         PUBLIC        IE
+  D:00C5H         PUBLIC        IAP_CMD
+  D:00B8H         PUBLIC        IP
+  D:00C3H         PUBLIC        IAP_ADDRH
+  D:00D8H         PUBLIC        CCON
+  D:00C4H         PUBLIC        IAP_ADDRL
+  C:027EH         PUBLIC        main
+  C:0255H         PUBLIC        Btlder_init_Uart1
+  C:0239H         PUBLIC        _Delay_ms
+  D:0098H         PUBLIC        SCON
+  D:0088H         PUBLIC        TCON
+  D:008EH         PUBLIC        AUXR
+  C:020CH         PUBLIC        _FLASH_PageErase
+  D:00C7H         PUBLIC        IAP_CONTR
+  D:00E0H         PUBLIC        ACC
+  D:00D6H         PUBLIC        T2H
+  D:00D7H         PUBLIC        T2L
+  D:00C2H         PUBLIC        IAP_DATA
+  C:01AAH         PUBLIC        _FLASH_ByteRead
+  D:00C6H         PUBLIC        IAP_TRIG
+  C:028BH         PUBLIC        IAP_Disable
+  C:01DCH         PUBLIC        _FLASH_ByteWrite
+  D:00D0H         PUBLIC        PSW
+  -------         PROC          MAIN
+  C:027EH         LINE#         61
+  C:027EH         LINE#         65
+BL51 BANKED LINKER/LOCATER V6.22                                                      06/12/2016  16:54:34  PAGE 4
+
+
+  C:0280H         LINE#         66
+  C:0283H         LINE#         74
+  C:0286H         LINE#         75
+  C:0289H         LINE#         76
+  -------         ENDPROC       MAIN
+  -------         PROC          BTLDER_INIT_UART1
+  C:0255H         LINE#         80
+  C:0255H         LINE#         81
+  C:0255H         LINE#         82
+  C:0257H         LINE#         83
+  C:0259H         LINE#         84
+  C:025BH         LINE#         85
+  C:025EH         LINE#         86
+  C:0261H         LINE#         87
+  C:0264H         LINE#         88
+  C:0267H         LINE#         89
+  C:026AH         LINE#         90
+  -------         ENDPROC       BTLDER_INIT_UART1
+  -------         PROC          BTLDER
+  -------         DO            
+  D:0008H         SYMBOL        Addr_j
+  D:000AH         SYMBOL        UpdatePacNum
+  D:000CH         SYMBOL        UART_DATA_buf
+  D:000DH         SYMBOL        UART_DATA_buf0
+  D:000EH         SYMBOL        IAP_UpdatePacNum
+  -------         ENDDO         
+  C:00BEH         LINE#         94
+  C:00BEH         LINE#         95
+  C:00BEH         LINE#         97
+  C:00C5H         LINE#         102
+  C:00CFH         LINE#         103
+  C:00D6H         LINE#         104
+  C:00DDH         LINE#         108
+  C:00EFH         LINE#         109
+  C:00EFH         LINE#         112
+  C:00FBH         LINE#         113
+  C:00FBH         LINE#         114
+  C:0105H         LINE#         117
+  C:0112H         LINE#         118
+  C:0122H         LINE#         119
+  C:0122H         LINE#         121
+  C:0127H         LINE#         122
+  C:0127H         LINE#         123
+  C:0143H         LINE#         124
+  C:0160H         LINE#         126
+  C:016FH         LINE#         130
+  C:0176H         LINE#         131
+  C:0189H         LINE#         133
+  C:0193H         LINE#         138
+  C:019EH         LINE#         145
+  C:01A1H         LINE#         146
+  C:01A1H         LINE#         152
+  -------         ENDPROC       BTLDER
+  -------         PROC          _FLASH_BYTEWRITE
+  D:000FH         SYMBOL        addr
+  D:0013H         SYMBOL        byte
+  C:01DCH         LINE#         158
+BL51 BANKED LINKER/LOCATER V6.22                                                      06/12/2016  16:54:34  PAGE 5
+
+
+  C:01E4H         LINE#         159
+  C:01E4H         LINE#         160
+  C:01E7H         LINE#         161
+  C:01EAH         LINE#         162
+  C:01F9H         LINE#         163
+  C:01FFH         LINE#         165
+  C:0202H         LINE#         167
+  C:0205H         LINE#         168
+  C:0208H         LINE#         169
+  C:0209H         LINE#         171
+  -------         ENDPROC       _FLASH_BYTEWRITE
+  -------         PROC          L?0032
+  -------         ENDPROC       L?0032
+  -------         PROC          _FLASH_BYTEREAD
+  D:000FH         SYMBOL        addr
+  C:01AAH         LINE#         179
+  C:01B2H         LINE#         180
+  C:01B2H         LINE#         181
+  C:01B5H         LINE#         182
+  C:01B8H         LINE#         183
+  C:01BBH         LINE#         185
+  C:01C9H         LINE#         186
+  C:01CFH         LINE#         189
+  C:01D2H         LINE#         190
+  C:01D5H         LINE#         191
+  C:01D6H         LINE#         193
+  C:01D9H         LINE#         195
+  C:01DBH         LINE#         196
+  -------         ENDPROC       _FLASH_BYTEREAD
+  -------         PROC          _FLASH_PAGEERASE
+  D:000FH         SYMBOL        addr
+  C:020CH         LINE#         205
+  C:0214H         LINE#         206
+  C:0214H         LINE#         208
+  C:0217H         LINE#         209
+  C:021AH         LINE#         211
+  C:0229H         LINE#         212
+  C:022FH         LINE#         215
+  C:0232H         LINE#         216
+  C:0235H         LINE#         217
+  C:0236H         LINE#         220
+  -------         ENDPROC       _FLASH_PAGEERASE
+  -------         PROC          IAP_DISABLE
+  C:028BH         LINE#         223
+  C:028BH         LINE#         224
+  C:028BH         LINE#         227
+  C:028EH         LINE#         228
+  C:0290H         LINE#         229
+  C:0292H         LINE#         230
+  C:0295H         LINE#         231
+  C:0297H         LINE#         232
+  -------         ENDPROC       IAP_DISABLE
+  -------         PROC          _DELAY_MS
+  D:0006H         SYMBOL        ms
+  -------         DO            
+  D:0004H         SYMBOL        k
+  D:0001H         SYMBOL        i
+BL51 BANKED LINKER/LOCATER V6.22                                                      06/12/2016  16:54:34  PAGE 6
+
+
+  D:0003H         SYMBOL        j
+  -------         ENDDO         
+  C:0239H         LINE#         234
+  C:0239H         LINE#         237
+  C:0243H         LINE#         238
+  C:0244H         LINE#         239
+  C:0245H         LINE#         240
+  C:0247H         LINE#         241
+  C:0249H         LINE#         243
+  C:0249H         LINE#         244
+  C:024BH         LINE#         245
+  C:024DH         LINE#         246
+  C:0254H         LINE#         248
+  -------         ENDPROC       _DELAY_MS
+  -------         ENDMOD        BOOTLOADER
+
+  -------         MODULE        ?C?ULSHR
+  C:026BH         PUBLIC        ?C?ULSHR
+  -------         ENDMOD        ?C?ULSHR
+
+Program Size: data=21.0 xdata=0 code=676
+LINK/LOCATE RUN COMPLETE.  0 WARNING(S),  0 ERROR(S)

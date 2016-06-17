@@ -1,0 +1,7 @@
+".\Objects\STARTUP.obj",
+".\Objects\FlashFunction.obj",
+".\Objects\init.obj",
+".\Objects\UtilsFunction.obj" 
+TO ".\Objects\SmartEntryÏÂ°å" 
+PRINT(".\Listings\SmartEntryÏÂ°å.m51") RAMSIZE(256) 
+CODE( 0x1000-0x7E00 , ?C_C51STARTUP(1000H) )
